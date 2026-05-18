@@ -778,12 +778,15 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
               <span className="block lg:pl-[300px] lg:whitespace-nowrap">
                 We are always interested in working with creative people.
               </span>
+              {" "}
               <span className="block lg:whitespace-nowrap">
                 If you work with augmented reality, 3D, animation, projections, or
               </span>
+              {" "}
               <span className="block lg:whitespace-nowrap">
                 anything else, please send a message to hello@1331.agency and we&apos;ll
               </span>
+              {" "}
               <span className="block lg:whitespace-nowrap">
                 come up with something interesting together
               </span>
