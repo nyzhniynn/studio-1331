@@ -263,6 +263,13 @@ export default function MotionOrchestrator() {
           const stageTop = parseFloat(window.getComputedStyle(heroStage).top);
           return Number.isFinite(stageTop) ? `top top+=${stageTop}` : "top top";
         };
+        const getHeroScrollDistance = () => {
+          if (!isMobile) {
+            return window.innerHeight;
+          }
+
+          return heroStage.getBoundingClientRect().height;
+        };
 
         gsap.set(yellowLayer, {
           clipPath: "inset(0% 0% 0% 0%)",
@@ -291,7 +298,7 @@ export default function MotionOrchestrator() {
           scrollTrigger: {
             trigger: hero,
             start: getHeroPinStart,
-            end: () => `+=${window.innerHeight}`,
+            end: () => `+=${getHeroScrollDistance()}`,
             pin: isMobile ? heroStage : false,
             pinSpacing: false,
             scrub: true,

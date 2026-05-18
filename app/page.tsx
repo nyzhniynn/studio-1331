@@ -354,8 +354,8 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
     <div data-motion-main-state={introActive ? "intro" : "ready"} className="contents">
       {!introActive ? <MotionOrchestrator /> : null}
       <DesktopMenu />
-      <section id="top" data-motion-hero className="relative h-[calc(220dvh-2.75rem)] w-full overflow-visible bg-[#f4f4ef] text-[#1E1E1E] sm:h-[calc(220dvh-2.5rem)]">
-        <div data-motion-hero-stage className="hero-panel sticky top-3 z-20 h-[calc(100dvh-2.75rem)] w-full overflow-hidden sm:top-5 sm:h-[calc(100dvh-2.5rem)]">
+      <section id="top" data-motion-hero className="relative h-[calc(220vh-2.75rem)] w-full overflow-visible bg-[#f4f4ef] text-[#1E1E1E] sm:h-[calc(220vh-2.5rem)]">
+        <div data-motion-hero-stage className="hero-panel sticky top-3 z-20 h-[calc(100vh-2.75rem)] w-full overflow-hidden sm:top-5 sm:h-[calc(100vh-2.5rem)]">
           <div data-motion-yellow-layer className="absolute inset-0 z-10 overflow-hidden bg-[#FFFB12]">
             <HeroFlowers />
 
@@ -393,7 +393,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
         </div>
       </section>
 
-      <section id="approach" data-motion-section data-motion-stack className="relative -mt-[calc(120dvh-2.75rem)] bg-[#f4f4ef] px-2 pt-[clamp(8rem,12vh,9rem)] pb-0 text-[#1E1E1E] sm:-mt-[calc(120dvh-2.5rem)]">
+      <section id="approach" data-motion-section data-motion-stack className="relative -mt-[calc(120vh-2.75rem)] bg-[#f4f4ef] px-2 pt-[clamp(8rem,12vh,9rem)] pb-0 text-[#1E1E1E] sm:-mt-[calc(120vh-2.5rem)]">
         <div className="mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8">
           <p className="col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-extrabold uppercase leading-none tracking-[-0.035em] lg:col-span-3">
             Who are we helping
