@@ -143,12 +143,12 @@ export default function Home() {
 
     firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => {
-        const fontsReady =
+        const heroBrandFontReady =
           "fonts" in document
-            ? document.fonts.ready.catch(() => undefined)
+            ? document.fonts.load('64px "Instrument Serif"').catch(() => undefined)
             : Promise.resolve();
 
-        fontsReady.then(() => {
+        heroBrandFontReady.then(() => {
           if (cancelled) {
             return;
           }
@@ -1035,8 +1035,12 @@ function IntroOverlay({
       };
     };
 
-    const startIntro = () => {
+    const startIntro = async () => {
       prepareMainContent();
+
+      if ("fonts" in document) {
+        await document.fonts.load('80px "Instrument Serif"').catch(() => undefined);
+      }
 
       if (disposed) {
         return;
@@ -1135,7 +1139,7 @@ function IntroOverlay({
         }, ">");
     };
 
-    startIntro();
+    void startIntro();
 
     return () => {
       disposed = true;
