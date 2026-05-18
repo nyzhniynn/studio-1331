@@ -259,12 +259,11 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
   const handleOpenCase = useCallback((
     event: MouseEvent<HTMLAnchorElement>,
     caseStudy: CaseStudy,
-    card: HTMLElement | null,
   ) => {
     const requiredVisibleCount = getVisibleHomeCaseCountForSlug(caseStudy.slug);
 
     saveVisibleCaseCount(Math.max(visibleCaseCount, requiredVisibleCount));
-    openCase(event, caseStudy, card);
+    openCase(event, caseStudy);
   }, [openCase, visibleCaseCount]);
 
   useLayoutEffect(() => {
@@ -497,7 +496,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                   <a
                     data-case-card-link
                     href={`/cases/${caseStudy.slug}`}
-                    onClick={(event) => handleOpenCase(event, caseStudy, event.currentTarget.closest("[data-motion-case-card]") as HTMLElement | null)}
+                    onClick={(event) => handleOpenCase(event, caseStudy)}
                     onPointerEnter={() => prefetchCase(caseStudy)}
                   >
                     <div data-motion-case-media className={layout.mediaClass}>
@@ -1249,7 +1248,7 @@ function LockedAutoplayVideo({ className, src }: { className?: string; src: stri
         setCanLoad(true);
       }
     };
-    const isTransitionIdle = () => !root.dataset.caseTransition;
+    const isTransitionIdle = () => !root.dataset.brandTransition;
 
     if (isTransitionIdle()) {
       queueMicrotask(enableLoad);
@@ -1268,7 +1267,7 @@ function LockedAutoplayVideo({ className, src }: { className?: string; src: stri
     });
 
     observer.observe(root, {
-      attributeFilter: ["data-case-transition"],
+      attributeFilter: ["data-brand-transition"],
       attributes: true,
     });
 

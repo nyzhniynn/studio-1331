@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { MouseEvent, ReactNode } from "react";
+import { useCaseTransition } from "./CaseTransitionProvider";
 
 type FooterHashLinkProps = {
   "aria-label"?: string;
@@ -27,8 +29,17 @@ export default function FooterHashLink({
   href,
   ...props
 }: FooterHashLinkProps) {
+  const pathname = usePathname();
+  const { navigateHomeAnchor } = useCaseTransition();
+
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (shouldLetBrowserHandle(event) || window.location.pathname !== "/") {
+    if (shouldLetBrowserHandle(event)) {
+      return;
+    }
+
+    if (pathname !== "/") {
+      event.preventDefault();
+      navigateHomeAnchor(href);
       return;
     }
 

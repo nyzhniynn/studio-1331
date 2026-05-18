@@ -5,6 +5,7 @@ export type CaseStudy = {
   year: string;
   image: string;
   imageAlt: string;
+  slides?: string[];
   descriptionLines: string[];
   mobileDescriptionLines?: string[];
   summary: string;
@@ -20,6 +21,113 @@ export type CaseStudy = {
 export const homeCaseRevealStep = 5;
 export const homeVisibleCaseCountKey = "studio-1331:home-visible-case-count";
 
+function caseAsset(folder: string, file: string) {
+  return `/Case/${encodeURIComponent(folder)}/${file}`;
+}
+
+function buildCaseSlides(folder: string, files: string[]) {
+  return files.map((file) => caseAsset(folder, file));
+}
+
+const kngkEnergoSlides = buildCaseSlides("KNGK ENERGO", [
+  "1.png",
+  "2.png",
+  "3.png",
+  "4.png",
+  "5.png",
+  "6.png",
+  "7.png",
+  "8.png",
+  "9.png",
+  "10.png",
+  "11.png",
+  "12.png",
+  "13.png",
+  "14.png",
+  "15.png",
+  "16.png",
+  "17.jpg",
+  "18.png",
+]);
+
+const kngkGroupSlides = buildCaseSlides("KNGK GROUP", [
+  "1.png",
+  "2.png",
+  "3.png",
+  "4.jpg",
+  "5.png",
+  "6.png",
+  "7.png",
+  "8.png",
+  "9.png",
+  "10.png",
+  "11.png",
+  "12.png",
+  "13.png",
+  "14.png",
+  "15.png",
+]);
+
+const kngkTranslogisticsSlides = buildCaseSlides("KNGK TRANSLOGISTIKA", [
+  "1.png",
+  "2.png",
+  "3.png",
+  "4.png",
+  "5.png",
+  "6.png",
+  "7.png",
+  "8.png",
+  "9.png",
+  "10.png",
+  "11.png",
+  "12.png",
+  "13.png",
+  "14.png",
+  "15.png",
+  "16.png",
+  "17.png",
+]);
+
+const formaZvukaSlides = buildCaseSlides("FORMA ZVUKA", [
+  "1.jpg",
+  "2.jpg",
+  "3.jpg",
+  "4.jpg",
+  "5.jpg",
+  "6.jpg",
+  "7.jpg",
+  "8.jpg",
+  "9.jpg",
+  "10.jpg",
+  "11.jpg",
+]);
+
+const kngkSportTeamSlides = buildCaseSlides("KNGK SPORT TEAM", [
+  "1.png",
+  "2.png",
+  "3.png",
+  "4.png",
+  "5.jpg",
+  "6.jpg",
+  "7.jpg",
+  "8.jpg",
+  "9.jpg",
+  "10.jpg",
+  "11.png",
+  "12.jpg",
+  "13.jpg",
+  "14.jpg",
+  "15.jpg",
+  "16.jpg",
+  "17.jpg",
+  "18.jpg",
+  "19.jpg",
+  "20.jpg",
+  "21.jpg",
+  "22.jpg",
+  "23.png",
+]);
+
 export const caseStudies: CaseStudy[] = [
   {
     slug: "kngk-energo",
@@ -28,6 +136,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     image: "/Photo/KNG%20ENERGO.png",
     imageAlt: "KNGK Energo project preview",
+    slides: kngkEnergoSlides,
     descriptionLines: [
       "Complete website redesign for a large independent",
       "energy retail company",
@@ -52,6 +161,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     image: "/Photo/kngk%20group.png",
     imageAlt: "KNGK Group project preview",
+    slides: kngkGroupSlides,
     descriptionLines: [
       "A major corporate project for an large industrial group in the field",
       "of oil refining, petrochemical, oil and gas production",
@@ -81,6 +191,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     image: "/Photo/kngk%20translogistics.png",
     imageAlt: "KNGK Translogistics project preview",
+    slides: kngkTranslogisticsSlides,
     descriptionLines: [
       "A completed project for a company specializing in the",
       "provision of special equipment",
@@ -105,6 +216,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     image: "/Photo/forma%20zvuka.png",
     imageAlt: "Forma Zvuka project preview",
+    slides: formaZvukaSlides,
     descriptionLines: [
       "Cultural project of the Anastasia Charitable Foundation",
     ],
@@ -128,6 +240,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     image: "/Photo/kngk%20sport%20team.png",
     imageAlt: "KNGK Sport Team project preview",
+    slides: kngkSportTeamSlides,
     descriptionLines: [
       "A large image project aimed at involving the team of the",
       "group of companies in sports programs and a healthy lifestyle",

@@ -19,11 +19,7 @@ export default function CaseProjectNavLink({
   const label = direction === "previous" ? "Previous project" : "Next project";
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    const source = event.currentTarget.querySelector<HTMLElement>(
-      "[data-case-detail-project-nav-media]",
-    );
-
-    switchCase(event, caseStudy, source);
+    switchCase(event, caseStudy);
   };
 
   return (

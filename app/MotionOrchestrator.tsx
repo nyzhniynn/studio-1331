@@ -46,7 +46,7 @@ function blendPoints(from: Point[], to: Point[], progress: number) {
   }));
 }
 
-function isReturningFromCaseTransition() {
+function isRestoringHomePage() {
   return window.sessionStorage.getItem(restoreHomeScrollKey) === "true";
 }
 
@@ -191,13 +191,13 @@ function animateHeroFlowers(withEntrance: boolean) {
 export default function MotionOrchestrator() {
   useLayoutEffect(() => {
     const reduceMotion = window.matchMedia(reduceMotionQuery).matches;
-    const returningFromCaseTransition = isReturningFromCaseTransition();
+    const restoringHomePage = isRestoringHomePage();
 
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
 
-    if (returningFromCaseTransition) {
+    if (restoringHomePage) {
       setHomeToRestoredFinalState();
     }
 
@@ -393,7 +393,7 @@ export default function MotionOrchestrator() {
 
       createHeroScrollScene();
 
-      if (returningFromCaseTransition) {
+      if (restoringHomePage) {
         animateHeroFlowers(false);
         ScrollTrigger.refresh();
         return;
@@ -406,7 +406,7 @@ export default function MotionOrchestrator() {
           const headerItems = gsap.utils.toArray<HTMLElement>(section.querySelectorAll("[data-motion='reveal']"));
           const cards = gsap.utils.toArray<HTMLElement>(section.querySelectorAll("[data-motion-case-card]"));
 
-          if (returningFromCaseTransition) {
+          if (restoringHomePage) {
             const media = cards
               .map((card) => card.querySelector<HTMLElement>("[data-motion-case-media]"))
               .filter(Boolean) as HTMLElement[];

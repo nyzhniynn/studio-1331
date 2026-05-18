@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import CaseContactForm from "./CaseContactForm";
 import CaseProjectNavLink from "./CaseProjectNavLink";
+import CaseVisualGallery from "./CaseVisualGallery";
 import type { CaseStudy } from "./caseData";
 
 type CaseNarrative = {
@@ -15,13 +16,7 @@ type CaseDetailLayoutProps = {
   caseStudy: CaseStudy;
   nextCase: CaseStudy;
   previousCase: CaseStudy;
-  primaryVisual?: "image" | "slot";
-  transition?: boolean;
 };
-
-function transitionAttr(name: string, enabled: boolean) {
-  return enabled ? { [name]: "" } : {};
-}
 
 export function formatDisplayTitle(title: string) {
   return title
@@ -55,8 +50,6 @@ export default function CaseDetailLayout({
   caseStudy,
   nextCase,
   previousCase,
-  primaryVisual = "image",
-  transition = false,
 }: CaseDetailLayoutProps) {
   const displayTitle = formatDisplayTitle(caseStudy.title);
   const narrative = buildCaseNarrative(caseStudy);
@@ -65,59 +58,41 @@ export default function CaseDetailLayout({
   return (
     <main data-case-detail className="min-h-screen bg-[#f4f4ef] p-3 pb-8 text-[#141714] sm:p-5">
       <section data-case-detail-poster>
-        <h1
-          data-case-detail-title
-          data-title-tone={titleTone}
-          {...transitionAttr("data-case-transition-title", transition)}
-        >
+        <h1 data-case-detail-title data-title-tone={titleTone}>
           {displayTitle}
         </h1>
       </section>
 
       <section data-case-detail-sheet>
-        <div data-case-detail-left-rail {...transitionAttr("data-case-transition-left-rail", transition)}>
-          <CaseProfileBlock caseStudy={caseStudy} transition={transition} />
-          <CaseCopyBlock label="About project" lead={narrative.overview} transition={transition} />
-          <CaseCopyBlock label="Task" paragraphs={narrative.challenge} transition={transition} />
-          <CaseCopyBlock label="Process" paragraphs={narrative.solution} transition={transition} />
-          <CaseCopyBlock label="Result" paragraphs={narrative.result} transition={transition} />
+        <div data-case-detail-left-rail>
+          <CaseProfileBlock caseStudy={caseStudy} />
+          <CaseCopyBlock label="About project" lead={narrative.overview} />
+          <CaseCopyBlock label="Task" paragraphs={narrative.challenge} />
+          <CaseCopyBlock label="Process" paragraphs={narrative.solution} />
+          <CaseCopyBlock label="Result" paragraphs={narrative.result} />
         </div>
 
-        <div
-          data-case-detail-divider
-          aria-hidden="true"
-          {...transitionAttr("data-case-transition-divider", transition)}
-        />
+        <div data-case-detail-divider aria-hidden="true" />
 
         <aside data-case-detail-visual-rail>
-          <div data-case-detail-right-note {...transitionAttr("data-case-transition-right-note", transition)}>
+          <div data-case-detail-right-note>
             {backSlot}
             <p>{caseStudy.category} / Full case</p>
           </div>
 
-          <VisualStack caseStudy={caseStudy} primaryVisual={primaryVisual} transition={transition} />
+          <VisualStack caseStudy={caseStudy} />
         </aside>
       </section>
 
-      <CaseQuietFooter nextCase={nextCase} previousCase={previousCase} transition={transition} />
+      <CaseQuietFooter nextCase={nextCase} previousCase={previousCase} />
       <CaseContactForm />
     </main>
   );
 }
 
-function CaseProfileBlock({
-  caseStudy,
-  transition,
-}: {
-  caseStudy: CaseStudy;
-  transition: boolean;
-}) {
+function CaseProfileBlock({ caseStudy }: { caseStudy: CaseStudy }) {
   return (
-    <section
-      data-case-detail-copy-row
-      data-row="profile"
-      {...transitionAttr("data-case-transition-copy-row", transition)}
-    >
+    <section data-case-detail-copy-row data-row="profile">
       <p data-case-detail-copy-label>Work profile</p>
       <div data-case-detail-copy-content>
         <p data-case-detail-profile-services>{caseStudy.services.join(", ")}</p>
@@ -132,15 +107,13 @@ function CaseCopyBlock({
   label,
   lead,
   paragraphs,
-  transition,
 }: {
   label: string;
   lead?: string;
   paragraphs?: string[];
-  transition: boolean;
 }) {
   return (
-    <section data-case-detail-copy-row {...transitionAttr("data-case-transition-copy-row", transition)}>
+    <section data-case-detail-copy-row>
       <p data-case-detail-copy-label>{label}</p>
       <div data-case-detail-copy-content>
         {lead ? <p data-case-detail-lead>{lead}</p> : null}
@@ -152,51 +125,25 @@ function CaseCopyBlock({
   );
 }
 
-function VisualStack({
-  caseStudy,
-  primaryVisual,
-  transition,
-}: {
-  caseStudy: CaseStudy;
-  primaryVisual: "image" | "slot";
-  transition: boolean;
-}) {
-  const followupVisuals = [1, 2];
+function VisualStack({ caseStudy }: { caseStudy: CaseStudy }) {
+  const caseVisuals = caseStudy.slides ?? [];
 
-  return (
-    <div data-case-detail-visual-stack>
-      <figure data-case-detail-media {...transitionAttr("data-case-transition-target-media", transition)}>
-        <img
-          aria-hidden={primaryVisual === "slot" ? "true" : undefined}
-          className="case-media-image"
-          src={caseStudy.image}
-          alt={primaryVisual === "image" ? caseStudy.imageAlt : ""}
-        />
-      </figure>
-      {followupVisuals.map((index) => (
-        <figure
-          data-case-detail-visual
-          {...transitionAttr("data-case-transition-followup-visual", transition)}
-          key={index}
-        >
-          <img className="case-media-image" src={caseStudy.image} alt="" />
-        </figure>
-      ))}
-    </div>
-  );
+  if (!caseVisuals.length) {
+    return null;
+  }
+
+  return <CaseVisualGallery images={caseVisuals} title={caseStudy.title} />;
 }
 
 function CaseQuietFooter({
   nextCase,
   previousCase,
-  transition,
 }: {
   nextCase: CaseStudy;
   previousCase: CaseStudy;
-  transition: boolean;
 }) {
   return (
-    <footer data-case-detail-footer {...transitionAttr("data-case-transition-footer", transition)}>
+    <footer data-case-detail-footer>
       <div data-case-detail-footer-line aria-hidden="true" />
       <CaseProjectNavCard direction="previous" caseStudy={previousCase} />
       <CaseProjectNavCard direction="next" caseStudy={nextCase} />
