@@ -942,6 +942,7 @@ function IntroOverlay({
   useLayoutEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let contentReadyPromise: Promise<void> | null = null;
+    let introTimeline: gsap.core.Timeline | null = null;
     let sharedTimeline: gsap.core.Timeline | null = null;
     let disposed = false;
 
@@ -989,12 +990,6 @@ function IntroOverlay({
     window.addEventListener("touchmove", preventIntroScroll, { passive: false });
     window.addEventListener("keydown", preventIntroKeys);
 
-    const introStartFontSize = Math.min(Math.max(window.innerWidth * 0.1, 80), 192);
-    const stageRect = introStage.getBoundingClientRect();
-    const introStartWidth = introBrand.getBoundingClientRect().width || 1;
-    const introStartLeft = window.innerWidth / 2 - stageRect.left - introStartWidth / 2;
-    const introStartTop = window.innerHeight / 2 - stageRect.top - introStartFontSize * 0.45;
-
     const cleanup = () => {
       window.removeEventListener("wheel", preventIntroScroll);
       window.removeEventListener("touchmove", preventIntroScroll);
@@ -1015,103 +1010,144 @@ function IntroOverlay({
       return contentReadyPromise;
     };
 
-    const timeline = gsap.timeline({ defaults: { ease: "power3.out" } });
+    const measureIntroStart = () => {
+      const stageRect = introStage.getBoundingClientRect();
+      const preferredFontSize = Math.min(Math.max(window.innerWidth * 0.1, 80), 192);
 
-    timeline
-      .set(intro, { autoAlpha: 1 })
-      .set(introBrand, {
-        left: introStartLeft,
-        top: introStartTop,
-        x: 0,
-        y: 0,
-        scale: 1,
-        fontSize: introStartFontSize,
-        transformOrigin: "0% 0%",
-      })
-      .set(introYellow, {
-        clipPath: "polygon(-20% 0%, -20% 0%, -35% 100%, -35% 100%)",
-      })
-      .add(() => {
-        prepareMainContent();
-      }, 0.2)
-      .fromTo(
-        introPieces,
-        { autoAlpha: 0, yPercent: (index) => (index === 0 ? 22 : -18), rotate: (index) => (index === 0 ? -4 : 4) },
-        { autoAlpha: 1, yPercent: 0, rotate: 0, duration: 1.15, stagger: 0.11 },
-        0.08,
-      )
-      .fromTo(
-        introColon,
-        { autoAlpha: 0, scale: 0.4, yPercent: -8 },
-        { autoAlpha: 1, scale: 1, yPercent: 0, duration: 0.85, ease: "back.out(1.25)" },
-        0.36,
-      )
-      .fromTo(
-        introStudio,
-        { autoAlpha: 0, xPercent: 8, yPercent: 14, rotate: 2 },
-        { autoAlpha: 1, xPercent: 0, yPercent: 0, rotate: 0, duration: 1.05 },
-        0.56,
-      )
-      .to(introYellow, {
-        clipPath: "polygon(-20% 0%, 120% 0%, 135% 100%, -35% 100%)",
-        duration: 1.55,
-        ease: "power4.inOut",
-      }, 1.15)
-      .set(introYellow, {
-        clipPath: "inset(0% 0% 0% 0%)",
-      })
-      .add(() => {
-        timeline.pause();
+      gsap.set(introBrand, { fontSize: preferredFontSize });
 
-        prepareMainContent().then(() => {
-          if (disposed) {
-            return;
-          }
+      const preferredWidth = introBrand.getBoundingClientRect().width || 1;
+      const safeInlinePadding = window.matchMedia("(max-width: 767px)").matches ? 24 : 0;
+      const maxAllowedWidth = Math.max(stageRect.width - safeInlinePadding, 1);
+      const fittedFontSize = Math.min(
+        preferredFontSize,
+        preferredFontSize * (maxAllowedWidth / preferredWidth),
+      );
 
-          const heroLogo = document.querySelector<HTMLElement>("[data-motion-hero-brand]");
-          const heroStage = document.querySelector<HTMLElement>("[data-motion-hero-stage]");
+      gsap.set(introBrand, { fontSize: fittedFontSize });
 
-          if (!heroLogo || !heroStage) {
-            completeIntro();
-            return;
-          }
+      const fittedWidth = introBrand.getBoundingClientRect().width || 1;
 
-          const toRect = heroLogo.getBoundingClientRect();
-          const stageRect = introStage.getBoundingClientRect();
-          const targetLeft = toRect.left - stageRect.left;
-          const targetTop = toRect.top - stageRect.top;
-          const targetFontSize = window.getComputedStyle(heroLogo).fontSize;
+      return {
+        fontSize: fittedFontSize,
+        left: window.innerWidth / 2 - stageRect.left - fittedWidth / 2,
+        top: window.innerHeight / 2 - stageRect.top - fittedFontSize * 0.45,
+      };
+    };
 
-          gsap.set(heroLogo, { autoAlpha: 0 });
+    const startIntro = async () => {
+      prepareMainContent();
 
-          sharedTimeline = gsap.timeline({
-            defaults: { ease: "power4.inOut" },
-            onComplete: completeIntro,
-          });
+      if ("fonts" in document) {
+        await Promise.allSettled([
+          document.fonts.load('80px "Instrument Serif"'),
+          document.fonts.ready,
+        ]);
+      }
 
-          sharedTimeline
-            .to(introBrand, {
-              left: targetLeft,
-              top: targetTop,
-              x: 0,
-              y: 0,
-              scale: 1,
-              fontSize: targetFontSize,
-              duration: 1.15,
-            })
-            .set(heroLogo, { autoAlpha: 1 })
-            .to(intro, {
-              autoAlpha: 0,
-              duration: 0.02,
-              ease: "none",
+      if (disposed) {
+        return;
+      }
+
+      const introStart = measureIntroStart();
+
+      introTimeline = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+      introTimeline
+        .set(intro, { autoAlpha: 1 })
+        .set(introBrand, {
+          left: introStart.left,
+          top: introStart.top,
+          x: 0,
+          y: 0,
+          scale: 1,
+          fontSize: introStart.fontSize,
+          transformOrigin: "0% 0%",
+        })
+        .set(introYellow, {
+          clipPath: "polygon(-20% 0%, -20% 0%, -35% 100%, -35% 100%)",
+        })
+        .fromTo(
+          introPieces,
+          { autoAlpha: 0, yPercent: (index) => (index === 0 ? 22 : -18), rotate: (index) => (index === 0 ? -4 : 4) },
+          { autoAlpha: 1, yPercent: 0, rotate: 0, duration: 1.15, stagger: 0.11 },
+          0.08,
+        )
+        .fromTo(
+          introColon,
+          { autoAlpha: 0, scale: 0.4, yPercent: -8 },
+          { autoAlpha: 1, scale: 1, yPercent: 0, duration: 0.85, ease: "back.out(1.25)" },
+          0.36,
+        )
+        .fromTo(
+          introStudio,
+          { autoAlpha: 0, xPercent: 8, yPercent: 14, rotate: 2 },
+          { autoAlpha: 1, xPercent: 0, yPercent: 0, rotate: 0, duration: 1.05 },
+          0.56,
+        )
+        .to(introYellow, {
+          clipPath: "polygon(-20% 0%, 120% 0%, 135% 100%, -35% 100%)",
+          duration: 1.55,
+          ease: "power4.inOut",
+        }, 1.15)
+        .set(introYellow, {
+          clipPath: "inset(0% 0% 0% 0%)",
+        })
+        .add(() => {
+          introTimeline?.pause();
+
+          prepareMainContent().then(() => {
+            if (disposed) {
+              return;
+            }
+
+            const heroLogo = document.querySelector<HTMLElement>("[data-motion-hero-brand]");
+            const heroStage = document.querySelector<HTMLElement>("[data-motion-hero-stage]");
+
+            if (!heroLogo || !heroStage) {
+              completeIntro();
+              return;
+            }
+
+            const toRect = heroLogo.getBoundingClientRect();
+            const stageRect = introStage.getBoundingClientRect();
+            const targetLeft = toRect.left - stageRect.left;
+            const targetTop = toRect.top - stageRect.top;
+            const targetFontSize = window.getComputedStyle(heroLogo).fontSize;
+
+            gsap.set(heroLogo, { autoAlpha: 0 });
+
+            sharedTimeline = gsap.timeline({
+              defaults: { ease: "power4.inOut" },
+              onComplete: completeIntro,
             });
-        });
-      }, ">");
+
+            sharedTimeline
+              .to(introBrand, {
+                left: targetLeft,
+                top: targetTop,
+                x: 0,
+                y: 0,
+                scale: 1,
+                fontSize: targetFontSize,
+                duration: 1.15,
+              })
+              .set(heroLogo, { autoAlpha: 1 })
+              .to(intro, {
+                autoAlpha: 0,
+                duration: 0.02,
+                ease: "none",
+              });
+          });
+        }, ">");
+    };
+
+    void startIntro();
 
     return () => {
       disposed = true;
       cleanup();
-      timeline.kill();
+      introTimeline?.kill();
       sharedTimeline?.kill();
     };
   }, [onComplete, onPrepareContent]);
