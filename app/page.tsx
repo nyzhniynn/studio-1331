@@ -1035,15 +1035,8 @@ function IntroOverlay({
       };
     };
 
-    const startIntro = async () => {
+    const startIntro = () => {
       prepareMainContent();
-
-      if ("fonts" in document) {
-        await Promise.allSettled([
-          document.fonts.load('80px "Instrument Serif"'),
-          document.fonts.ready,
-        ]);
-      }
 
       if (disposed) {
         return;
@@ -1142,7 +1135,7 @@ function IntroOverlay({
         }, ">");
     };
 
-    void startIntro();
+    startIntro();
 
     return () => {
       disposed = true;
