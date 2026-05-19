@@ -1,26 +1,79 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import FormChoiceRow from "./FormChoiceRow";
 
 gsap.registerPlugin(ScrollTrigger);
 
-function CaseFormLineField({ label }: { label: string }) {
+const caseContactServiceOptions = [
+  "Strategic basis",
+  "Brand & Digital Identity",
+  "Website & Digital Platform",
+  "Redesign of existing products",
+] as const;
+const caseContactBudgetOptions = [
+  "Less than $20k",
+  "$20-$40k",
+  "$40-$60k",
+  "$60-$80k",
+  "$80-$100k",
+  "To infinity and beyond",
+] as const;
+
+type CaseContactFields = {
+  company: string;
+  email: string;
+  name: string;
+  phone: string;
+  task: string;
+};
+
+type CaseContactStatus = "idle" | "loading" | "success" | "error";
+
+function CaseFormLineField({
+  label,
+  name,
+  onChange,
+  value,
+}: {
+  label: string;
+  name: keyof CaseContactFields;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  value: string;
+}) {
   return (
     <label data-case-contact-field>
       <span>{label}</span>
-      <input aria-label={label} className="motion-field" type="text" />
+      <input
+        aria-label={label}
+        className="motion-field"
+        name={name}
+        onChange={onChange}
+        type={label === "E-mail" ? "email" : label === "Phone" ? "tel" : "text"}
+        value={value}
+      />
     </label>
   );
 }
 
 export default function CaseContactForm() {
   const [expanded, setExpanded] = useState(false);
+  const [fields, setFields] = useState<CaseContactFields>({
+    company: "",
+    email: "",
+    name: "",
+    phone: "",
+    task: "",
+  });
+  const [budget, setBudget] = useState<string[]>([]);
+  const [services, setServices] = useState<string[]>([]);
+  const [status, setStatus] = useState<CaseContactStatus>("idle");
+  const [statusMessage, setStatusMessage] = useState("");
   const buttonTweenRef = useRef<gsap.core.Tween | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const formRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useLayoutEffect(() => {
     return () => {
@@ -112,6 +165,77 @@ export default function CaseContactForm() {
     });
   };
 
+  const clearFeedback = () => {
+    setStatus((current) => (current === "loading" ? current : "idle"));
+    setStatusMessage("");
+  };
+
+  const handleFieldChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = event.currentTarget;
+
+    clearFeedback();
+    setFields((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const resetForm = () => {
+    setBudget([]);
+    setFields({
+      company: "",
+      email: "",
+      name: "",
+      phone: "",
+      task: "",
+    });
+    setServices([]);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (status === "loading") {
+      return;
+    }
+
+    setStatus("loading");
+    setStatusMessage("");
+
+    const formData = new FormData();
+
+    services.forEach((service) => {
+      formData.append("services", service);
+    });
+    budget.forEach((item) => {
+      formData.append("budget", item);
+    });
+    formData.append("task", fields.task);
+    formData.append("name", fields.name);
+    formData.append("company", fields.company);
+    formData.append("email", fields.email);
+    formData.append("phone", fields.phone);
+
+    try {
+      const response = await fetch("/api/contact", {
+        body: formData,
+        method: "POST",
+      });
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(result?.error ?? "Could not send the request. Please try again.");
+      }
+
+      resetForm();
+      setStatus("success");
+      setStatusMessage("Request sent. We will contact you soon.");
+    } catch (error) {
+      setStatus("error");
+      setStatusMessage(error instanceof Error ? error.message : "Could not send the request. Please try again.");
+    }
+  };
+
   return (
     <section data-case-contact data-expanded={expanded}>
       <div data-case-contact-intro>
@@ -133,28 +257,29 @@ export default function CaseContactForm() {
       </div>
 
       {expanded ? (
-        <div id="case-contact-form" data-case-contact-form ref={formRef}>
+        <form id="case-contact-form" data-case-contact-form ref={formRef} onSubmit={handleSubmit}>
           <FormChoiceRow
             title="Services"
-            options={[
-              "Strategic basis",
-              "Brand & Digital Identity",
-              "Website & Digital Platform",
-              "Redesign of existing products",
-            ]}
+            name="services"
+            onSelectedChange={(selected) => {
+              clearFeedback();
+              setServices(selected);
+            }}
+            options={[...caseContactServiceOptions]}
+            selectedOptions={services}
             serif
           />
 
           <FormChoiceRow
             title="Budget"
-            options={[
-              "Less than $20k",
-              "$20-$40k",
-              "$40-$60k",
-              "$60-$80k",
-              "$80-$100k",
-              "To infinity and beyond",
-            ]}
+            multiple={false}
+            name="budget"
+            onSelectedChange={(selected) => {
+              clearFeedback();
+              setBudget(selected);
+            }}
+            options={[...caseContactBudgetOptions]}
+            selectedOptions={budget}
             serif
           />
 
@@ -163,32 +288,46 @@ export default function CaseContactForm() {
             <textarea
               className="motion-field"
               aria-label="Task"
+              name="task"
+              onChange={handleFieldChange}
               placeholder="Briefly describe the project"
               rows={3}
+              value={fields.task}
             />
           </div>
 
           <div data-motion-form-item>
             <p>Contacts</p>
             <div data-case-contact-fields>
-              <CaseFormLineField label="Name" />
-              <CaseFormLineField label="Company" />
-              <CaseFormLineField label="E-mail" />
-              <CaseFormLineField label="Phone" />
+              <CaseFormLineField label="Name" name="name" onChange={handleFieldChange} value={fields.name} />
+              <CaseFormLineField label="Company" name="company" onChange={handleFieldChange} value={fields.company} />
+              <CaseFormLineField label="E-mail" name="email" onChange={handleFieldChange} value={fields.email} />
+              <CaseFormLineField label="Phone" name="phone" onChange={handleFieldChange} value={fields.phone} />
             </div>
 
             <div data-case-contact-submit>
-              <p>
-                By clicking on the button, I consent to the processing of
-                personal data and confirm that I have read the terms and
-                conditions.
-              </p>
-              <button className="motion-button" type="button">
-                Send
+              <div>
+                <p>
+                  By clicking on the button, I consent to the processing of
+                  personal data and confirm that I have read the terms and
+                  conditions.
+                </p>
+                {statusMessage ? (
+                  <p
+                    aria-live="polite"
+                    className={status === "error" ? "text-[#A13A2F]" : undefined}
+                    role="status"
+                  >
+                    {statusMessage}
+                  </p>
+                ) : null}
+              </div>
+              <button className="motion-button" disabled={status === "loading"} type="submit">
+                {status === "loading" ? "Sending" : "Send"}
               </button>
             </div>
           </div>
-        </div>
+        </form>
       ) : null}
     </section>
   );

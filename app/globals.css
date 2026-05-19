@@ -875,15 +875,34 @@ html[data-brand-transition] {
   display: none !important;
 }
 
-.motion-case:hover .motion-media,
-.motion-case:focus-within .motion-media {
-  transform: translateY(-4px);
-}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  [data-motion-case-media] {
+    --case-hover-image-x: 0px;
+    --case-hover-image-y: 0px;
+    transform-style: preserve-3d;
+    transform-origin: 50% 50%;
+    box-shadow: 0 18px 42px rgba(20, 23, 20, 0);
+    backface-visibility: hidden;
+    will-change: transform;
+    transition:
+      box-shadow 620ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
 
-.motion-case:hover .motion-media::after,
-.motion-case:focus-within .motion-media::after {
-  opacity: 1;
-  transform: translateX(35%);
+  [data-motion-case-media][data-case-hover-active="true"] {
+    box-shadow: 0 30px 72px rgba(20, 23, 20, 0.24);
+  }
+
+  [data-motion-case-media] .case-media-image {
+    transform: translate3d(var(--case-hover-image-x), var(--case-hover-image-y), 24px) scale(1);
+    will-change: transform;
+  }
+
+  [data-motion-case-media][data-case-hover-active="true"] .case-media-image {
+    transform:
+      translate3d(var(--case-hover-image-x), var(--case-hover-image-y), 24px)
+      scale(1.07);
+  }
 }
 
 [data-brand-transition-overlay] {
@@ -1572,6 +1591,12 @@ html[data-brand-transition] {
   border-color: #141714;
   color: #f4f4ef;
   transform: translateY(-2px);
+}
+
+.motion-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+  transform: none;
 }
 
 .motion-link {
@@ -2582,7 +2607,7 @@ html[data-brand-transition] {
     padding-bottom: 5rem !important;
   }
 
-  [data-motion-preset="form"] > div > div {
+  [data-motion-preset="form"] > div > :is(div, form) {
     margin-top: 5rem !important;
     gap: 4rem !important;
   }
@@ -2928,7 +2953,7 @@ html[data-brand-transition] {
     padding-bottom: clamp(5rem, 9vh, 7rem) !important;
   }
 
-  [data-motion-preset="form"] > div > div {
+  [data-motion-preset="form"] > div > :is(div, form) {
     margin-top: clamp(5rem, 10vh, 7.5rem) !important;
     gap: clamp(3.5rem, 7vh, 5.25rem) !important;
   }

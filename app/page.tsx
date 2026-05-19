@@ -1,6 +1,17 @@
 ﻿"use client";
 
-import { type MouseEvent, useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+  memo,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MotionOrchestrator from "./MotionOrchestrator";
@@ -20,6 +31,63 @@ const skipHomeIntroKey = "studio-1331:skip-home-intro";
 const restoreHomeScrollKey = "studio-1331:restore-home-scroll";
 const smallCaseMediaClass = "motion-media";
 const largeCaseMediaClass = "motion-media";
+const caseHoverQuery = "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+const contactFileMaxSize = 20 * 1024 * 1024;
+const contactFileAccept = ".pdf,.png,.jpg,.jpeg,.zip,.doc,.docx";
+const contactAllowedFileExtensions = new Set(["pdf", "png", "jpg", "jpeg", "zip", "doc", "docx"]);
+const contactServiceOptions = [
+  "Strategic basis",
+  "Brand & Digital Identity",
+  "Website & Digital Platform",
+  "Redesign of existing products",
+] as const;
+const contactBudgetOptions = [
+  "Less than $20k",
+  "$20-$40k",
+  "$40-$60k",
+  "$60-$80k",
+  "$80-$100k",
+  "To infinity and beyond",
+] as const;
+
+type CaseHoverValues = {
+  imageX: number;
+  imageY: number;
+  rotateX: number;
+  rotateY: number;
+  translateX: number;
+  translateY: number;
+};
+
+type ContactFormFields = {
+  company: string;
+  email: string;
+  name: string;
+  phone: string;
+  task: string;
+};
+
+type ContactFormStatus = "idle" | "loading" | "success" | "error";
+
+const baseCaseHoverTransform =
+  "perspective(1200px) translate3d(0px, 0px, 0) rotateX(0deg) rotateY(0deg)";
+
+function clampHoverAxis(value: number) {
+  return Math.min(1, Math.max(-1, value));
+}
+
+function canUseCaseHover(event?: ReactPointerEvent<HTMLElement>) {
+  return (
+    (!event || event.pointerType !== "touch") &&
+    window.matchMedia(caseHoverQuery).matches
+  );
+}
+
+function getFileExtension(fileName: string) {
+  const extension = fileName.split(".").pop();
+
+  return extension ? extension.toLowerCase() : "";
+}
 
 function getHomeCaseLayout(index: number) {
   const batch = Math.floor(index / homeCaseRevealStep);
@@ -198,10 +266,26 @@ export default function Home() {
 
 function MainPageContent({ introActive }: { introActive: boolean }) {
   const caseGridRef = useRef<HTMLDivElement>(null);
+  const caseHoverFrameRef = useRef<number | null>(null);
+  const activeCaseHoverMediaRef = useRef<HTMLElement | null>(null);
+  const pendingCaseHoverRef = useRef<({ media: HTMLElement } & CaseHoverValues) | null>(null);
+  const contactFileInputRef = useRef<HTMLInputElement>(null);
   const [initialVisibleCaseCount] = useState(readSavedVisibleCaseCount);
   const previousVisibleCaseCountRef = useRef(initialVisibleCaseCount);
   const teamCarouselRef = useRef<HTMLDivElement>(null);
   const [activeTeamSlide, setActiveTeamSlide] = useState(0);
+  const [attachedContactFiles, setAttachedContactFiles] = useState<File[]>([]);
+  const [contactBudget, setContactBudget] = useState<string[]>([]);
+  const [contactFields, setContactFields] = useState<ContactFormFields>({
+    company: "",
+    email: "",
+    name: "",
+    phone: "",
+    task: "",
+  });
+  const [contactFormMessage, setContactFormMessage] = useState("");
+  const [contactFormStatus, setContactFormStatus] = useState<ContactFormStatus>("idle");
+  const [contactServices, setContactServices] = useState<string[]>([]);
   const [visibleCaseCount, setVisibleCaseCount] = useState(initialVisibleCaseCount);
   const { openCase, prefetchCase } = useCaseTransition();
   const visibleCases = caseStudies.slice(0, visibleCaseCount);
@@ -266,6 +350,235 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
     openCase(event, caseStudy);
   }, [openCase, visibleCaseCount]);
 
+  const flushCaseHoverFrame = useCallback(() => {
+    const pending = pendingCaseHoverRef.current;
+
+    caseHoverFrameRef.current = null;
+
+    if (!pending) {
+      return;
+    }
+
+    pending.media.style.transform = [
+      "perspective(1200px)",
+      `translate3d(${pending.translateX.toFixed(2)}px, ${pending.translateY.toFixed(2)}px, 0)`,
+      `rotateX(${pending.rotateX.toFixed(2)}deg)`,
+      `rotateY(${pending.rotateY.toFixed(2)}deg)`,
+    ].join(" ");
+    pending.media.style.setProperty("--case-hover-image-x", `${pending.imageX.toFixed(2)}px`);
+    pending.media.style.setProperty("--case-hover-image-y", `${pending.imageY.toFixed(2)}px`);
+  }, []);
+
+  const queueCaseHoverFrame = useCallback((media: HTMLElement, values: CaseHoverValues) => {
+    pendingCaseHoverRef.current = {
+      media,
+      ...values,
+    };
+
+    if (caseHoverFrameRef.current !== null) {
+      return;
+    }
+
+    caseHoverFrameRef.current = window.requestAnimationFrame(flushCaseHoverFrame);
+  }, [flushCaseHoverFrame]);
+
+  const resetCaseHover = useCallback((media: HTMLElement) => {
+    if (pendingCaseHoverRef.current?.media === media) {
+      pendingCaseHoverRef.current = null;
+    }
+
+    if (activeCaseHoverMediaRef.current === media) {
+      activeCaseHoverMediaRef.current = null;
+    }
+
+    media.dataset.caseHoverActive = "false";
+    media.style.transform = baseCaseHoverTransform;
+    media.style.setProperty("--case-hover-image-x", "0px");
+    media.style.setProperty("--case-hover-image-y", "0px");
+  }, []);
+
+  const handleCaseMediaPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const media = event.currentTarget;
+
+    if (!canUseCaseHover(event)) {
+      resetCaseHover(media);
+      return;
+    }
+
+    const rect = media.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+      return;
+    }
+
+    const horizontal = clampHoverAxis(((event.clientX - rect.left) / rect.width) * 2 - 1);
+    const vertical = clampHoverAxis(((event.clientY - rect.top) / rect.height) * 2 - 1);
+
+    activeCaseHoverMediaRef.current = media;
+    media.dataset.caseHoverActive = "true";
+    queueCaseHoverFrame(media, {
+      imageX: horizontal * -12,
+      imageY: vertical * -9,
+      rotateX: vertical * -5,
+      rotateY: horizontal * 5,
+      translateX: horizontal * 4,
+      translateY: -11 + vertical * 2.5,
+    });
+  }, [queueCaseHoverFrame, resetCaseHover]);
+
+  const handleCaseMediaPointerLeave = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    resetCaseHover(event.currentTarget);
+  }, [resetCaseHover]);
+
+  const clearContactFeedback = useCallback(() => {
+    setContactFormStatus((current) => (current === "loading" ? current : "idle"));
+    setContactFormMessage("");
+  }, []);
+
+  const handleContactFieldChange = useCallback((
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = event.currentTarget;
+
+    clearContactFeedback();
+    setContactFields((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }, [clearContactFeedback]);
+
+  const addContactFiles = useCallback((fileList: FileList | File[]) => {
+    const incomingFiles = Array.from(fileList);
+
+    if (!incomingFiles.length) {
+      return;
+    }
+
+    const invalidFile = incomingFiles.find((file) => (
+      file.size > contactFileMaxSize ||
+      !contactAllowedFileExtensions.has(getFileExtension(file.name))
+    ));
+
+    if (invalidFile) {
+      setContactFormStatus("error");
+      setContactFormMessage(`${invalidFile.name} is not supported or is larger than 20MB.`);
+      return;
+    }
+
+    clearContactFeedback();
+    setAttachedContactFiles((current) => {
+      const existingKeys = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+      const nextFiles = [...current];
+
+      incomingFiles.forEach((file) => {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+          nextFiles.push(file);
+        }
+      });
+
+      return nextFiles;
+    });
+  }, [clearContactFeedback]);
+
+  const handleContactFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    if (event.currentTarget.files) {
+      addContactFiles(event.currentTarget.files);
+    }
+
+    event.currentTarget.value = "";
+  }, [addContactFiles]);
+
+  const handleContactFileDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    if (event.dataTransfer.files.length) {
+      addContactFiles(event.dataTransfer.files);
+    }
+  }, [addContactFiles]);
+
+  const handleContactFileDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  }, []);
+
+  const removeContactFile = useCallback((indexToRemove: number) => {
+    clearContactFeedback();
+    setAttachedContactFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  }, [clearContactFeedback]);
+
+  const resetContactForm = useCallback(() => {
+    setAttachedContactFiles([]);
+    setContactBudget([]);
+    setContactFields({
+      company: "",
+      email: "",
+      name: "",
+      phone: "",
+      task: "",
+    });
+    setContactServices([]);
+
+    if (contactFileInputRef.current) {
+      contactFileInputRef.current.value = "";
+    }
+  }, []);
+
+  const handleContactSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (contactFormStatus === "loading") {
+      return;
+    }
+
+    setContactFormStatus("loading");
+    setContactFormMessage("");
+
+    const formData = new FormData();
+
+    contactServices.forEach((service) => {
+      formData.append("services", service);
+    });
+    contactBudget.forEach((budget) => {
+      formData.append("budget", budget);
+    });
+    formData.append("task", contactFields.task);
+    formData.append("name", contactFields.name);
+    formData.append("company", contactFields.company);
+    formData.append("email", contactFields.email);
+    formData.append("phone", contactFields.phone);
+    attachedContactFiles.forEach((file) => {
+      formData.append("files", file, file.name);
+    });
+
+    try {
+      const response = await fetch("/api/contact", {
+        body: formData,
+        method: "POST",
+      });
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(result?.error ?? "Could not send the request. Please try again.");
+      }
+
+      resetContactForm();
+      setContactFormStatus("success");
+      setContactFormMessage("Request sent. We will contact you soon.");
+    } catch (error) {
+      setContactFormStatus("error");
+      setContactFormMessage(error instanceof Error ? error.message : "Could not send the request. Please try again.");
+    }
+  }, [
+    attachedContactFiles,
+    contactBudget,
+    contactFields,
+    contactFormStatus,
+    contactServices,
+    resetContactForm,
+  ]);
+
   useLayoutEffect(() => {
     updateActiveTeamSlide();
     window.addEventListener("resize", updateActiveTeamSlide);
@@ -274,6 +587,18 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
       window.removeEventListener("resize", updateActiveTeamSlide);
     };
   }, [updateActiveTeamSlide]);
+
+  useLayoutEffect(() => {
+    return () => {
+      if (caseHoverFrameRef.current !== null) {
+        window.cancelAnimationFrame(caseHoverFrameRef.current);
+      }
+
+      if (activeCaseHoverMediaRef.current) {
+        resetCaseHover(activeCaseHoverMediaRef.current);
+      }
+    };
+  }, [resetCaseHover]);
 
   useLayoutEffect(() => {
     const previousVisibleCaseCount = previousVisibleCaseCountRef.current;
@@ -451,6 +776,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
           <div data-motion="media" className="who-help-media motion-media col-span-12 mt-[clamp(4rem,6vw,5rem)] h-[clamp(22rem,25vw,31rem)] bg-[#141714] lg:col-start-7 lg:col-end-13">
             <LockedAutoplayVideo
               className="who-help-video"
+              poster="/videos/intro2-poster.jpg"
               src="/videos/intro2.mp4"
             />
           </div>
@@ -499,7 +825,14 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                     onClick={(event) => handleOpenCase(event, caseStudy)}
                     onPointerEnter={() => prefetchCase(caseStudy)}
                   >
-                    <div data-motion-case-media className={layout.mediaClass}>
+                    <div
+                      data-motion-case-media
+                      className={layout.mediaClass}
+                      onPointerCancel={handleCaseMediaPointerLeave}
+                      onPointerEnter={handleCaseMediaPointerMove}
+                      onPointerLeave={handleCaseMediaPointerLeave}
+                      onPointerMove={handleCaseMediaPointerMove}
+                    >
                       <img className="case-media-image" src={caseStudy.image} alt={caseStudy.imageAlt} />
                     </div>
                     <CaseCaption
@@ -694,44 +1027,86 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
             you and suggest further steps.
           </p>
 
-          <div className="mt-[120px] max-w-[1540px] space-y-[84px]">
+          <form
+            className="mt-[120px] max-w-[1540px] space-y-[84px]"
+            encType="multipart/form-data"
+            onSubmit={handleContactSubmit}
+          >
             <FormChoiceRow
               title="Services"
-              options={[
-                "Strategic basis",
-                "Brand & Digital Identity",
-                "Website & Digital Platform",
-                "Redesign of existing products",
-              ]}
+              name="services"
+              onSelectedChange={(selected) => {
+                clearContactFeedback();
+                setContactServices(selected);
+              }}
+              options={[...contactServiceOptions]}
+              selectedOptions={contactServices}
               serif
             />
 
             <FormChoiceRow
               title="Budget"
-              options={[
-                "Less than $20k",
-                "$20-$40k",
-                "$40-$60k",
-                "$60-$80k",
-                "$80-$100k",
-                "To infinity and beyond",
-              ]}
+              multiple={false}
+              name="budget"
+              onSelectedChange={(selected) => {
+                clearContactFeedback();
+                setContactBudget(selected);
+              }}
+              options={[...contactBudgetOptions]}
+              selectedOptions={contactBudget}
               serif
             />
 
-            <div data-motion-form-item>
+            <div
+              data-motion-form-item
+              onDragOver={handleContactFileDragOver}
+              onDrop={handleContactFileDrop}
+            >
               <p className="font-serif text-[64px] italic leading-[0.88] tracking-[-0.03em] text-[#141714]">
                 Task
               </p>
-              <div className="mt-[38px] max-w-[1490px] border-b border-[#BFBFB8] pb-[10px] font-serif text-[20px] leading-[24px] tracking-[0em] text-[#A9A9A2]">
-                Launch and maintenance
-              </div>
+              <textarea
+                aria-label="Task"
+                className="motion-field mt-[38px] block min-h-[35px] w-full max-w-[1490px] resize-none border-0 border-b border-[#BFBFB8] bg-transparent px-0 pb-[10px] font-serif text-[20px] leading-[24px] tracking-[0em] text-[#141714] outline-none placeholder:text-[#A9A9A2]"
+                name="task"
+                onChange={handleContactFieldChange}
+                placeholder="Launch and maintenance"
+                rows={1}
+                value={contactFields.task}
+              />
+              <input
+                ref={contactFileInputRef}
+                accept={contactFileAccept}
+                className="hidden"
+                multiple
+                name="files"
+                onChange={handleContactFileChange}
+                type="file"
+              />
               <button
                 type="button"
                 className="motion-link mt-[22px] font-serif text-[24px] leading-none tracking-[-0.02em] text-[#141714]"
+                onClick={() => contactFileInputRef.current?.click()}
               >
                 + Attach a file
               </button>
+              {attachedContactFiles.length ? (
+                <ul className="mt-4 grid max-w-[1490px] gap-2 font-sans text-[14px] leading-[18px] text-[#141714]">
+                  {attachedContactFiles.map((file, index) => (
+                    <li className="flex items-center justify-between gap-4 border-b border-[#D4D4CD] pb-2" key={`${file.name}-${file.size}-${file.lastModified}`}>
+                      <span className="min-w-0 truncate">{file.name}</span>
+                      <button
+                        aria-label={`Remove ${file.name}`}
+                        className="font-bold uppercase text-[#9A9A9A]"
+                        onClick={() => removeContactFile(index)}
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
 
             <div data-motion-form-item className="pt-[10px]">
@@ -740,29 +1115,41 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
               </p>
 
               <div className="mt-[48px] grid grid-cols-1 gap-x-8 gap-y-12 lg:grid-cols-2 lg:max-w-[1480px]">
-                <FormLineField label="Name" />
-                <FormLineField label="Company" />
-                <FormLineField label="E-mail" />
-                <FormLineField label="Phone" />
+                <FormLineField label="Name" name="name" onChange={handleContactFieldChange} value={contactFields.name} />
+                <FormLineField label="Company" name="company" onChange={handleContactFieldChange} value={contactFields.company} />
+                <FormLineField label="E-mail" name="email" onChange={handleContactFieldChange} value={contactFields.email} />
+                <FormLineField label="Phone" name="phone" onChange={handleContactFieldChange} value={contactFields.phone} />
               </div>
 
               <div className="mt-[58px] grid grid-cols-1 gap-x-8 gap-y-8 lg:max-w-[1480px] lg:grid-cols-2 lg:items-end">
-                <p className="max-w-[620px] font-sans text-[16px] font-normal leading-[20px] tracking-[0em] text-[#1E1E1E]">
-                  By clicking on the &quot;Submit request&quot; button, I consent to the processing
-                  <br />
-                  of personal data and confirm that I have read the terms and conditions.
-                  <br />
-                  Personal Data Processing Policies
-                </p>
+                <div className="max-w-[620px] font-sans text-[16px] font-normal leading-[20px] tracking-[0em] text-[#1E1E1E]">
+                  <p>
+                    By clicking on the &quot;Submit request&quot; button, I consent to the processing
+                    <br />
+                    of personal data and confirm that I have read the terms and conditions.
+                    <br />
+                    Personal Data Processing Policies
+                  </p>
+                  {contactFormMessage ? (
+                    <p
+                      aria-live="polite"
+                      className={`mt-4 font-bold ${contactFormStatus === "error" ? "text-[#A13A2F]" : "text-[#141714]"}`}
+                      role="status"
+                    >
+                      {contactFormMessage}
+                    </p>
+                  ) : null}
+                </div>
                 <button
-                  type="button"
+                  disabled={contactFormStatus === "loading"}
+                  type="submit"
                   className="motion-button h-[58px] w-[360px] border border-[#BFBFB8] font-sans text-[18px] font-bold uppercase leading-none tracking-[0em] text-[#141714] lg:justify-self-start"
                 >
-                  Send
+                  {contactFormStatus === "loading" ? "Sending" : "Send"}
                 </button>
               </div>
             </div>
-          </div>
+          </form>
         </div>
       </section>
 
@@ -1225,14 +1612,23 @@ function MorphFlower() {
   );
 }
 
-function LockedAutoplayVideo({ className, src }: { className?: string; src: string }) {
+const LockedAutoplayVideo = memo(function LockedAutoplayVideo({
+  className,
+  poster,
+  src,
+}: {
+  className?: string;
+  poster: string;
+  src: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [canLoad, setCanLoad] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const [shouldLoadSource, setShouldLoadSource] = useState(false);
 
   const playVideo = useCallback(() => {
     const video = videoRef.current;
 
-    if (!video) {
+    if (!video || document.hidden) {
       return;
     }
 
@@ -1244,47 +1640,77 @@ function LockedAutoplayVideo({ className, src }: { className?: string; src: stri
   }, []);
 
   useLayoutEffect(() => {
+    const video = videoRef.current;
     const root = document.documentElement;
     let cancelled = false;
-    const enableLoad = () => {
+    let transitionObserver: MutationObserver | null = null;
+
+    const enableSource = () => {
       if (!cancelled) {
-        setCanLoad(true);
+        setShouldLoadSource(true);
       }
     };
+
     const isTransitionIdle = () => !root.dataset.brandTransition;
-
-    if (isTransitionIdle()) {
-      queueMicrotask(enableLoad);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const observer = new MutationObserver(() => {
-      if (!isTransitionIdle()) {
+    const loadWhenTransitionIdle = () => {
+      if (isTransitionIdle()) {
+        enableSource();
         return;
       }
 
-      observer.disconnect();
-      enableLoad();
-    });
+      transitionObserver?.disconnect();
+      transitionObserver = new MutationObserver(() => {
+        if (!isTransitionIdle()) {
+          return;
+        }
 
-    observer.observe(root, {
-      attributeFilter: ["data-brand-transition"],
-      attributes: true,
-    });
+        transitionObserver?.disconnect();
+        transitionObserver = null;
+        enableSource();
+      });
+
+      transitionObserver.observe(root, {
+        attributeFilter: ["data-brand-transition"],
+        attributes: true,
+      });
+    };
+
+    if (!video || !("IntersectionObserver" in window)) {
+      setIsInView(true);
+      loadWhenTransitionIdle();
+      return () => {
+        cancelled = true;
+        transitionObserver?.disconnect();
+      };
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const active = entry.isIntersecting;
+
+        setIsInView(active);
+
+        if (active) {
+          loadWhenTransitionIdle();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "320px 0px",
+        threshold: 0.01,
+      },
+    );
+
+    observer.observe(video);
 
     return () => {
       cancelled = true;
       observer.disconnect();
+      transitionObserver?.disconnect();
     };
   }, []);
 
   useLayoutEffect(() => {
-    if (!canLoad) {
-      return;
-    }
-
     const video = videoRef.current;
 
     if (!video) {
@@ -1294,44 +1720,49 @@ function LockedAutoplayVideo({ className, src }: { className?: string; src: stri
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
+
+    if (!shouldLoadSource || !isInView) {
+      video.pause();
+      return;
+    }
+
     playVideo();
 
-    const handlePause = () => playVideo();
-    const handleEnded = () => playVideo();
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
+      if (document.hidden) {
+        video.pause();
+        return;
+      }
+
+      if (isInView) {
         playVideo();
       }
     };
 
-    video.addEventListener("pause", handlePause);
-    video.addEventListener("ended", handleEnded);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      video.removeEventListener("pause", handlePause);
-      video.removeEventListener("ended", handleEnded);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [canLoad, playVideo]);
+  }, [isInView, playVideo, shouldLoadSource]);
 
   return (
     <video
       ref={videoRef}
       aria-hidden="true"
-      autoPlay={canLoad}
       className={className}
       controls={false}
       disablePictureInPicture
       loop
       muted
       playsInline
-      preload={canLoad ? "auto" : "none"}
-      src={canLoad ? src : undefined}
+      poster={poster}
+      preload="metadata"
+      src={shouldLoadSource ? src : undefined}
       tabIndex={-1}
     />
   );
-}
+});
 
 const foldedFlowerPath =
   "M34.0653 125.858L70.711 129.333L37.0595 138.18L18.5878 153.041L14.1151 185.58L46.4637 238.012L80.6119 261.5L107.638 252.925L113.699 218.662L125.99 198.745L124.308 238.636L129.298 259.171L164.559 269.34L189.425 260.687L231.6 241.204L219.691 193.574L176.522 148.388L201.177 166.956L230.403 171.565C242.626 159.449 267.175 135.246 267.578 135.362C267.981 135.478 269.798 120.725 270.657 113.334L263.478 104.171L249.034 91.821L253.828 75.1979L236.138 64.6406L219.051 72.808L204.706 79.0378L214.933 49.2498L215.057 28.0065L199.769 7.22937L176.598 0.547265L129.976 12.7468L103.658 26.4364L97.1489 37.6543L104.426 65.397L82.5595 25.8084L63.5537 23.6013L24.9328 32.652L2.11261 58.8084L7.8293 76.8255L0.566144 102.012L10.39 119.031L34.0653 125.858Z";
@@ -1667,7 +2098,17 @@ function ProcessStep({
   );
 }
 
-function FormLineField({ label }: { label: string }) {
+function FormLineField({
+  label,
+  name,
+  onChange,
+  value,
+}: {
+  label: string;
+  name: keyof ContactFormFields;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  value: string;
+}) {
   return (
     <label className="block">
       <span className="block font-serif text-[clamp(1.35rem,1.2vw,1.7rem)] leading-none tracking-[-0.04em] text-[#9A9A9A]">
@@ -1675,7 +2116,9 @@ function FormLineField({ label }: { label: string }) {
       </span>
       <input
         type={label === "E-mail" ? "email" : label === "Phone" ? "tel" : "text"}
-        name={label.toLowerCase().replace("-", "")}
+        name={name}
+        onChange={onChange}
+        value={value}
         className="motion-field mt-3 block h-[26px] w-full border-0 border-b border-[#BFBFB8] bg-transparent px-0 font-sans text-[20px] leading-[24px] tracking-[0em] text-[#141714] outline-none"
       />
     </label>

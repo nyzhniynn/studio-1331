@@ -3,22 +3,37 @@
 import { useState } from "react";
 
 export default function FormChoiceRow({
+  multiple = true,
+  name,
+  onSelectedChange,
   title,
   options,
+  selectedOptions,
   serif,
 }: {
+  multiple?: boolean;
+  name?: string;
+  onSelectedChange?: (selected: string[]) => void;
   title: string;
   options: string[];
+  selectedOptions?: string[];
   serif?: boolean;
 }) {
-  const [selected, setSelected] = useState<string[]>([]);
+  const [internalSelected, setInternalSelected] = useState<string[]>([]);
+  const selected = selectedOptions ?? internalSelected;
 
   function toggleOption(option: string) {
-    setSelected((current) =>
-      current.includes(option)
-        ? current.filter((item) => item !== option)
-        : [...current, option],
-    );
+    const nextSelected = selected.includes(option)
+      ? selected.filter((item) => item !== option)
+      : multiple
+        ? [...selected, option]
+        : [option];
+
+    if (!selectedOptions) {
+      setInternalSelected(nextSelected);
+    }
+
+    onSelectedChange?.(nextSelected);
   }
 
   return (
@@ -47,6 +62,11 @@ export default function FormChoiceRow({
           );
         })}
       </div>
+      {name
+        ? selected.map((option) => (
+            <input key={`${name}-${option}`} type="hidden" name={name} value={option} />
+          ))
+        : null}
     </div>
   );
 }
