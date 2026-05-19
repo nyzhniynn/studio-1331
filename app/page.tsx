@@ -32,7 +32,7 @@ const restoreHomeScrollKey = "studio-1331:restore-home-scroll";
 const smallCaseMediaClass = "motion-media";
 const largeCaseMediaClass = "motion-media";
 const caseHoverQuery = "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
-const contactFileMaxSize = 20 * 1024 * 1024;
+const contactFileMaxSize = 4 * 1024 * 1024;
 const contactFileAccept = ".pdf,.png,.jpg,.jpeg,.zip,.doc,.docx";
 const contactAllowedFileExtensions = new Set(["pdf", "png", "jpg", "jpeg", "zip", "doc", "docx"]);
 const contactServiceOptions = [
@@ -461,7 +461,16 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
     if (invalidFile) {
       setContactFormStatus("error");
-      setContactFormMessage(`${invalidFile.name} is not supported or is larger than 20MB.`);
+      setContactFormMessage(`${invalidFile.name} is not supported or is larger than 4MB.`);
+      return;
+    }
+
+    const currentSize = attachedContactFiles.reduce((sum, file) => sum + file.size, 0);
+    const incomingSize = incomingFiles.reduce((sum, file) => sum + file.size, 0);
+
+    if (currentSize + incomingSize > contactFileMaxSize) {
+      setContactFormStatus("error");
+      setContactFormMessage("Attachments are too large for this form. Please keep the total upload under 4MB.");
       return;
     }
 
@@ -481,7 +490,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
       return nextFiles;
     });
-  }, [clearContactFeedback]);
+  }, [attachedContactFiles, clearContactFeedback]);
 
   const handleContactFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     if (event.currentTarget.files) {

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const maxFileSize = 20 * 1024 * 1024;
+const maxVercelPayloadSize = 4 * 1024 * 1024;
 const maxTextLength = 3000;
 const allowedExtensions = new Set(["pdf", "png", "jpg", "jpeg", "zip", "doc", "docx"]);
 const allowedMimeTypes = new Set([
@@ -20,6 +20,13 @@ type TelegramResponse = {
   description?: string;
   ok: boolean;
 };
+
+class TelegramApiError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TelegramApiError";
+  }
+}
 
 function getText(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -93,8 +100,8 @@ function validateFile(file: File) {
   const extension = getExtension(file.name);
   const type = file.type.toLowerCase();
 
-  if (file.size > maxFileSize) {
-    return `${file.name} is larger than 20MB.`;
+  if (file.size > maxVercelPayloadSize) {
+    return `${file.name} is larger than 4MB.`;
   }
 
   if (!allowedExtensions.has(extension)) {
@@ -103,6 +110,16 @@ function validateFile(file: File) {
 
   if (type && !allowedMimeTypes.has(type)) {
     return `${file.name} has an unsupported file type.`;
+  }
+
+  return null;
+}
+
+function validateTotalUploadSize(files: File[]) {
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+
+  if (totalSize > maxVercelPayloadSize) {
+    return "Attachments are too large for this form. Please keep the total upload under 4MB.";
   }
 
   return null;
@@ -163,7 +180,7 @@ async function sendTelegramRequest(endpoint: string, body: BodyInit, contentType
   const result = await response.json().catch(() => null) as TelegramResponse | null;
 
   if (!response.ok || result?.ok === false) {
-    throw new Error(result?.description ?? "Telegram request failed.");
+    throw new TelegramApiError(result?.description ?? `Telegram request failed with status ${response.status}.`);
   }
 }
 
@@ -249,6 +266,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: fileValidationError }, { status: 400 });
     }
 
+    const totalUploadValidationError = validateTotalUploadSize(files);
+
+    if (totalUploadValidationError) {
+      return NextResponse.json({ error: totalUploadValidationError }, { status: 400 });
+    }
+
     await sendLeadMessage(chatId, buildMessage({
       budget,
       company,
@@ -267,6 +290,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Contact form error", error);
+
+    if (error instanceof TelegramApiError) {
+      return NextResponse.json(
+        { error: `Telegram rejected the request: ${error.message}` },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json(
       { error: "Could not send the request. Please try again." },
