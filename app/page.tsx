@@ -688,8 +688,8 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
       {!introActive ? <MotionOrchestrator /> : null}
       <DesktopMenu />
       <section id="top" data-motion-hero className="relative h-[calc(220vh-2.75rem)] w-full overflow-visible bg-[#f4f4ef] text-[#1E1E1E] sm:h-[calc(220vh-2.5rem)]">
-        <div data-motion-hero-stage className="hero-panel sticky top-3 z-20 h-[calc(100vh-2.75rem)] w-full overflow-hidden sm:top-5 sm:h-[calc(100vh-2.5rem)]">
-          <div data-motion-yellow-layer className="absolute inset-0 z-10 overflow-hidden bg-[#FFFB12]">
+        <div data-motion-hero-stage className="hero-panel sticky top-3 z-20 h-[calc(100vh-2.75rem)] w-full overflow-hidden rounded-[24px] sm:top-5 sm:h-[calc(100vh-2.5rem)]">
+          <div data-motion-yellow-layer className="absolute inset-0 z-10 overflow-hidden rounded-[inherit] bg-[#FFFB12]">
             <HeroFlowers />
 
             <div className="relative z-10 flex h-full flex-col px-8 pt-7 pb-9">
@@ -842,7 +842,12 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                       onPointerLeave={handleCaseMediaPointerLeave}
                       onPointerMove={handleCaseMediaPointerMove}
                     >
-                      <img className="case-media-image" src={caseStudy.image} alt={caseStudy.imageAlt} />
+                      <img
+                        className="case-media-image"
+                        src={caseStudy.image}
+                        alt={caseStudy.imageAlt}
+                        style={caseStudy.homeImagePosition ? { objectPosition: caseStudy.homeImagePosition } : undefined}
+                      />
                     </div>
                     <CaseCaption
                       title={caseStudy.title}
@@ -877,7 +882,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                 (4)
               </span>
             </h2>
-            <p data-motion="reveal" className="mt-[48px] max-w-[48rem] font-sans text-[20px] font-bold uppercase leading-[24px] tracking-[0em] text-[#141714]">
+            <p data-motion="reveal" className="mt-6 max-w-[48rem] font-sans text-[20px] font-bold uppercase leading-[24px] tracking-[0em] text-[#141714]">
               Each format is a complete system for working with
               <br />
               a specific task. We don&apos;t work in the format of
@@ -1980,8 +1985,8 @@ const projectRoles = [
 ] as const;
 
 const teamMembers = [
-  { name: "YEGOR", description: "Art Director", image: "/PhotoTeam/YEGOR.jpg", imageAlt: "Yegor", objectPosition: "center 18%" },
   { name: "PAVEL", description: "CEO", image: "/PhotoTeam/Pavel.jpg", imageAlt: "Pavel", objectPosition: "center" },
+  { name: "YEGOR", description: "Art Director", image: "/PhotoTeam/YEGOR.jpg", imageAlt: "Yegor", objectPosition: "center 18%" },
   { name: "NIKITA", description: "Creative Technologist", image: "/PhotoTeam/NIKITA.jpg", imageAlt: "Nikita", objectPosition: "center" },
   { name: "ROMAN", description: "Brand Identity Designer", image: "/PhotoTeam/Roman.jpg", imageAlt: "Roman", objectPosition: "center top" },
   { name: "EVGENIY", description: "Full-Stack Developer", image: "/PhotoTeam/Evgeny1.png", imageAlt: "Evgeniy", objectPosition: "center" },

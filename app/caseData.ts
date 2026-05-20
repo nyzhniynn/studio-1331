@@ -5,6 +5,7 @@ export type CaseStudy = {
   year: string;
   image: string;
   imageAlt: string;
+  homeImagePosition?: string;
   slides?: string[];
   descriptionLines: string[];
   mobileDescriptionLines?: string[];
@@ -191,6 +192,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     image: "/Photo/kngk%20translogistics.png",
     imageAlt: "KNGK Translogistics project preview",
+    homeImagePosition: "center 28%",
     slides: kngkTranslogisticsSlides,
     descriptionLines: [
       "A completed project for a company specializing in the",
@@ -240,6 +242,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     image: "/Photo/kngk%20sport%20team.png",
     imageAlt: "KNGK Sport Team project preview",
+    homeImagePosition: "center 18%",
     slides: kngkSportTeamSlides,
     descriptionLines: [
       "A large image project aimed at involving the team of the",

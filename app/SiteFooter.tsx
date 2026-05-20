@@ -19,8 +19,6 @@ const footerServiceItems = [
 
 const footerSocialItems = [
   { label: "Instagram", shortLabel: "IG", href: "https://www.instagram.com/" },
-  { label: "Behance", shortLabel: "BE", href: "https://www.behance.net/" },
-  { label: "Dribbble", shortLabel: "DR", href: "https://dribbble.com/" },
   { label: "Telegram", shortLabel: "TG", href: "https://t.me/" },
 ] as const;
 

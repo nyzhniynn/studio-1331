@@ -11,8 +11,6 @@ export default function CustomCursor() {
 
   useEffect(() => {
     const cursor = cursorRef.current;
-    const cursorDot = cursor?.querySelector<HTMLElement>(".custom-cursor__dot");
-
     if (!cursor || window.matchMedia("(pointer: coarse)").matches) {
       return;
     }
@@ -30,18 +28,15 @@ export default function CustomCursor() {
       const color = isLightTheme ? "#f4f4ef" : "#141714";
 
       cursor.style.borderColor = color;
-      cursor.style.backgroundColor = isInteractive ? "transparent" : color;
-
-      if (cursorDot) {
-        cursorDot.style.backgroundColor = color;
-      }
+      cursor.style.backgroundColor = "transparent";
+      cursor.style.color = color;
     };
 
     const render = () => {
       currentX += (targetX - currentX) * 0.28;
       currentY += (targetY - currentY) * 0.28;
 
-      cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`;
+      cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) translate(-2px, -2px)`;
       animationFrame = window.requestAnimationFrame(render);
     };
 
@@ -134,7 +129,9 @@ export default function CustomCursor() {
 
   return (
     <div ref={cursorRef} className="custom-cursor" aria-hidden="true">
-      <span className="custom-cursor__dot" />
+      <svg className="custom-cursor__arrow" viewBox="0 0 48 48" focusable="false">
+        <path d="M4.24 3.23C2.29 1.91-.21 3.87.55 6.13L14.1 45.5c.9 2.62 4.58 2.69 5.58.11l5.97-15.41c.34-.88 1.04-1.58 1.92-1.92l15.62-6.06c2.55-.99 2.52-4.61-.05-5.55L4.24 3.23Z" />
+      </svg>
     </div>
   );
 }
