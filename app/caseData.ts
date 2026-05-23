@@ -396,38 +396,54 @@ export const caseStudies: CaseStudy[] = [
   },
 ];
 
+export const publishedCaseSlugs = [
+  "kngk-energo",
+  "kngk-group",
+  "kngk-translogistics",
+  "forma-zvuka",
+  "kngk-sport-team",
+] as const;
+
+export const publishedCaseStudies = publishedCaseSlugs
+  .map((slug) => caseStudies.find((caseStudy) => caseStudy.slug === slug))
+  .filter((caseStudy): caseStudy is CaseStudy => Boolean(caseStudy));
+
 export function getCaseBySlug(slug: string) {
   return caseStudies.find((caseStudy) => caseStudy.slug === slug);
 }
 
-export function getNextCase(slug: string) {
-  const currentIndex = caseStudies.findIndex((caseStudy) => caseStudy.slug === slug);
-
-  if (currentIndex === -1) {
-    return caseStudies[0];
-  }
-
-  return caseStudies[(currentIndex + 1) % caseStudies.length];
+export function getPublishedCaseBySlug(slug: string) {
+  return publishedCaseStudies.find((caseStudy) => caseStudy.slug === slug);
 }
 
-export function getPreviousCase(slug: string) {
-  const currentIndex = caseStudies.findIndex((caseStudy) => caseStudy.slug === slug);
+export function getNextPublishedCase(slug: string) {
+  const currentIndex = publishedCaseStudies.findIndex((caseStudy) => caseStudy.slug === slug);
 
   if (currentIndex === -1) {
-    return caseStudies[caseStudies.length - 1];
+    return publishedCaseStudies[0];
   }
 
-  return caseStudies[(currentIndex - 1 + caseStudies.length) % caseStudies.length];
+  return publishedCaseStudies[(currentIndex + 1) % publishedCaseStudies.length];
+}
+
+export function getPreviousPublishedCase(slug: string) {
+  const currentIndex = publishedCaseStudies.findIndex((caseStudy) => caseStudy.slug === slug);
+
+  if (currentIndex === -1) {
+    return publishedCaseStudies[publishedCaseStudies.length - 1];
+  }
+
+  return publishedCaseStudies[(currentIndex - 1 + publishedCaseStudies.length) % publishedCaseStudies.length];
 }
 
 export function getVisibleHomeCaseCountForSlug(slug: string) {
-  const caseIndex = caseStudies.findIndex((caseStudy) => caseStudy.slug === slug);
+  const caseIndex = publishedCaseStudies.findIndex((caseStudy) => caseStudy.slug === slug);
 
   if (caseIndex === -1) {
-    return Math.min(homeCaseRevealStep, caseStudies.length);
+    return Math.min(homeCaseRevealStep, publishedCaseStudies.length);
   }
 
   const visibleBatchCount = Math.ceil((caseIndex + 1) / homeCaseRevealStep) * homeCaseRevealStep;
 
-  return Math.min(visibleBatchCount, caseStudies.length);
+  return Math.min(visibleBatchCount, publishedCaseStudies.length);
 }

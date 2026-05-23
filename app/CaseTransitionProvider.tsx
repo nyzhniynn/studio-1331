@@ -14,13 +14,21 @@ import { usePathname, useRouter } from "next/navigation";
 import { flushSync } from "react-dom";
 import gsap from "gsap";
 import { getVisibleHomeCaseCountForSlug, homeVisibleCaseCountKey, type CaseStudy } from "./caseData";
+import {
+  getCasePath,
+  getHomePath,
+  getLocaleFromPathname,
+  getPathnameFromHref,
+  type Locale,
+} from "./i18n";
 
-type TransitionIntent = "case" | "home" | "home-anchor";
+type TransitionIntent = "case" | "home" | "home-anchor" | "locale";
 
 type PendingNavigation = {
   href: string;
   intent: TransitionIntent;
   pathname: string;
+  scrollY?: number;
   slug?: string;
   targetId?: string;
 };
@@ -36,10 +44,11 @@ type CaseTransitionContextValue = {
   openCase: (event: MouseEvent<HTMLAnchorElement>, caseStudy: CaseStudy) => void;
   prefetchCase: (caseStudy: CaseStudy) => void;
   switchCase: (event: MouseEvent<HTMLAnchorElement>, caseStudy: CaseStudy) => void;
+  switchLocale: (event: MouseEvent<HTMLAnchorElement>, href: string, locale: Locale) => void;
 };
 
 type BodyLockState = {
-  overflow: string;
+  cleanup: () => void;
 };
 
 const CaseTransitionContext = createContext<CaseTransitionContextValue | null>(null);
@@ -47,9 +56,10 @@ const homeScrollKey = "studio-1331:case-home-scroll";
 const homeReturnSlugKey = "studio-1331:home-return-slug";
 const restoreHomeScrollKey = "studio-1331:restore-home-scroll";
 const skipIntroKey = "studio-1331:skip-home-intro";
+const homeMotionReadyEvent = "studio-1331:home-motion-ready";
 
-function getCaseHref(caseStudy: CaseStudy) {
-  return `/cases/${caseStudy.slug}`;
+function getCaseHref(caseStudy: CaseStudy, locale: Locale) {
+  return getCasePath(caseStudy.slug, locale);
 }
 
 function canHandleLinkClick(event: MouseEvent<HTMLAnchorElement>) {
@@ -164,13 +174,26 @@ function waitForTimeline(timeline: gsap.core.Timeline) {
 }
 
 function lockBodyScroll(): BodyLockState {
-  const lockState = {
-    overflow: document.body.style.overflow,
+  const preventScroll = (event: Event) => {
+    event.preventDefault();
+  };
+  const preventScrollKeys = (event: KeyboardEvent) => {
+    if (["ArrowDown", "ArrowUp", "End", "Home", "PageDown", "PageUp", " "].includes(event.key)) {
+      event.preventDefault();
+    }
   };
 
-  document.body.style.overflow = "hidden";
+  window.addEventListener("wheel", preventScroll, { passive: false });
+  window.addEventListener("touchmove", preventScroll, { passive: false });
+  window.addEventListener("keydown", preventScrollKeys);
 
-  return lockState;
+  return {
+    cleanup: () => {
+      window.removeEventListener("wheel", preventScroll);
+      window.removeEventListener("touchmove", preventScroll);
+      window.removeEventListener("keydown", preventScrollKeys);
+    },
+  };
 }
 
 function unlockBodyScroll(lockState: BodyLockState | null) {
@@ -178,7 +201,7 @@ function unlockBodyScroll(lockState: BodyLockState | null) {
     return;
   }
 
-  document.body.style.overflow = lockState.overflow;
+  lockState.cleanup();
 }
 
 function setBrandTransitionState(active: boolean) {
@@ -190,8 +213,115 @@ function setBrandTransitionState(active: boolean) {
   delete document.documentElement.dataset.brandTransition;
 }
 
+function setSiteChromeReady() {
+  document.documentElement.dataset.siteReady = "true";
+  delete document.documentElement.dataset.siteIntro;
+}
+
 function isHomeIntent(intent: TransitionIntent) {
   return intent === "home" || intent === "home-anchor";
+}
+
+function isHomePathname(pathname: string) {
+  return pathname === "/" || pathname === "/ru";
+}
+
+function clearHomeMotionReadyState() {
+  delete document.documentElement.dataset.homeMotionReadyLocale;
+}
+
+function isHomeDomReadyForLocale(locale: Locale) {
+  if (getLocaleFromPathname(window.location.pathname) !== locale) {
+    return false;
+  }
+
+  if (document.documentElement.lang !== locale) {
+    return false;
+  }
+
+  const readyRoot = document.querySelector<HTMLElement>("[data-motion-main-state='ready']");
+  const heroLine = readyRoot?.querySelector<HTMLElement>("[data-motion-hero-line]");
+
+  if (
+    !readyRoot?.querySelector("[data-motion-hero]") ||
+    !readyRoot.querySelector("[data-motion-hero-stage]") ||
+    !readyRoot.querySelector("[data-motion-yellow-layer]") ||
+    !readyRoot.querySelector("[data-motion-hero-copy]") ||
+    !heroLine
+  ) {
+    return false;
+  }
+
+  const heroLineStyle = window.getComputedStyle(heroLine);
+
+  return heroLineStyle.visibility !== "hidden" && Number(heroLineStyle.opacity) > 0.01;
+}
+
+function waitForHomeMotionReady(locale: Locale, signal: AbortSignal) {
+  if (
+    document.documentElement.dataset.homeMotionReadyLocale === locale ||
+    isHomeDomReadyForLocale(locale)
+  ) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve) => {
+    let frameId = 0;
+    let readyFrameCount = 0;
+
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+
+    const cleanup = () => {
+      document.removeEventListener(homeMotionReadyEvent, handleReady);
+      signal.removeEventListener("abort", handleAbort);
+    };
+    const finish = () => {
+      cleanup();
+      window.cancelAnimationFrame(frameId);
+      resolve();
+    };
+    const handleAbort = () => {
+      finish();
+    };
+    const checkDomReady = () => {
+      if (signal.aborted) {
+        finish();
+        return;
+      }
+
+      if (document.documentElement.dataset.homeMotionReadyLocale === locale) {
+        finish();
+        return;
+      }
+
+      if (isHomeDomReadyForLocale(locale)) {
+        readyFrameCount += 1;
+
+        if (readyFrameCount >= 2) {
+          finish();
+          return;
+        }
+      } else {
+        readyFrameCount = 0;
+      }
+
+      frameId = window.requestAnimationFrame(checkDomReady);
+    };
+    const handleReady = (event: Event) => {
+      const readyLocale = (event as CustomEvent<{ locale?: Locale }>).detail?.locale;
+
+      if (readyLocale === locale) {
+        finish();
+      }
+    };
+
+    document.addEventListener(homeMotionReadyEvent, handleReady);
+    signal.addEventListener("abort", handleAbort, { once: true });
+    frameId = window.requestAnimationFrame(checkDomReady);
+  });
 }
 
 function scrollElementIntoViewInstant(target: HTMLElement) {
@@ -209,6 +339,8 @@ function scrollElementIntoViewInstant(target: HTMLElement) {
 export function CaseTransitionProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
+  const homePath = getHomePath(locale);
   const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const markRef = useRef<HTMLParagraphElement>(null);
@@ -237,6 +369,7 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem(restoreHomeScrollKey);
       sessionStorage.removeItem(skipIntroKey);
       sessionStorage.removeItem(homeReturnSlugKey);
+      setSiteChromeReady();
     }
 
     setTransition(null);
@@ -348,8 +481,8 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
   }, [coverCurrentPage]);
 
   const prefetchCase = useCallback((caseStudy: CaseStudy) => {
-    router.prefetch(getCaseHref(caseStudy));
-  }, [router]);
+    router.prefetch(getCaseHref(caseStudy, locale));
+  }, [locale, router]);
 
   const openCase = useCallback<CaseTransitionContextValue["openCase"]>((event, caseStudy) => {
     if (!canHandleLinkClick(event)) {
@@ -358,7 +491,7 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
 
     event.preventDefault();
 
-    const href = getCaseHref(caseStudy);
+    const href = getCaseHref(caseStudy, locale);
 
     sessionStorage.setItem(homeScrollKey, String(window.scrollY));
     sessionStorage.setItem(skipIntroKey, "true");
@@ -368,17 +501,17 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
     startNavigation({
       href,
       intent: "case",
-      pathname: href,
+      pathname: getPathnameFromHref(href),
       slug: caseStudy.slug,
     });
-  }, [router, startNavigation]);
+  }, [locale, router, startNavigation]);
 
   const switchCase = useCallback<CaseTransitionContextValue["switchCase"]>((event, caseStudy) => {
     if (!canHandleLinkClick(event)) {
       return;
     }
 
-    const href = getCaseHref(caseStudy);
+    const href = getCaseHref(caseStudy, locale);
 
     if (pathname === href) {
       return;
@@ -389,10 +522,41 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
     startNavigation({
       href,
       intent: "case",
-      pathname: href,
+      pathname: getPathnameFromHref(href),
       slug: caseStudy.slug,
     });
-  }, [pathname, router, startNavigation]);
+  }, [locale, pathname, router, startNavigation]);
+
+  const switchLocale = useCallback<CaseTransitionContextValue["switchLocale"]>((event, href, nextLocale) => {
+    if (!canHandleLinkClick(event)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (nextLocale === locale || pendingRef.current) {
+      return;
+    }
+
+    const targetPathname = getPathnameFromHref(href);
+    const scrollY = window.scrollY;
+
+    if (isHomePathname(targetPathname)) {
+      clearHomeMotionReadyState();
+    }
+
+    sessionStorage.removeItem(restoreHomeScrollKey);
+    sessionStorage.removeItem(homeReturnSlugKey);
+    sessionStorage.setItem(homeScrollKey, String(scrollY));
+    sessionStorage.setItem(skipIntroKey, "true");
+    router.prefetch(href);
+    startNavigation({
+      href,
+      intent: "locale",
+      pathname: targetPathname,
+      scrollY,
+    });
+  }, [locale, router, startNavigation]);
 
   const navigateHomeAnchor = useCallback((href: `/#${string}`) => {
     if (pendingRef.current) {
@@ -405,14 +569,16 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem(homeReturnSlugKey);
     sessionStorage.setItem(restoreHomeScrollKey, "true");
     sessionStorage.setItem(skipIntroKey, "true");
-    router.prefetch("/");
+    const localizedHref = `${homePath}${href.slice(1)}`;
+
+    router.prefetch(homePath);
     startNavigation({
-      href,
+      href: localizedHref,
       intent: "home-anchor",
-      pathname: "/",
+      pathname: getPathnameFromHref(localizedHref),
       targetId,
     });
-  }, [router, startNavigation]);
+  }, [homePath, router, startNavigation]);
 
   const closeCase = useCallback((caseStudy: CaseStudy) => {
     if (pendingRef.current) {
@@ -426,14 +592,14 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem(restoreHomeScrollKey, "true");
     sessionStorage.setItem(skipIntroKey, "true");
     markHomeVisibleCasesForRestore(caseStudy.slug);
-    router.prefetch("/");
+    router.prefetch(homePath);
     startNavigation({
-      href: "/",
+      href: homePath,
       intent: "home",
-      pathname: "/",
+      pathname: homePath,
       slug: caseStudy.slug,
     });
-  }, [router, startNavigation]);
+  }, [homePath, router, startNavigation]);
 
   useLayoutEffect(() => {
     const pending = pendingRef.current;
@@ -444,12 +610,25 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     const frameIds: number[] = [];
+    const abortController = new AbortController();
     const bloomElements = overlayRef.current.querySelectorAll<HTMLElement>("[data-brand-transition-bloom]");
 
     const prepareDestination = async () => {
       if (pending.intent === "case") {
         scrollWindowToInstant(0);
         await waitForPaintFrames(2, frameIds);
+        return;
+      }
+
+      if (pending.intent === "locale") {
+        const targetScrollY = clampScrollY(pending.scrollY ?? readSavedHomeScroll());
+
+        scrollWindowToInstant(targetScrollY);
+        if (isHomePathname(pending.pathname)) {
+          await waitForHomeMotionReady(getLocaleFromPathname(pending.pathname), abortController.signal);
+        } else {
+          await waitForPaintFrames(2, frameIds);
+        }
         return;
       }
 
@@ -489,7 +668,7 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       if (reduceMotion) {
-        releaseTransition(isHomeIntent(pending.intent));
+        releaseTransition(pending.intent === "locale" || isHomeIntent(pending.intent));
         return;
       }
 
@@ -498,7 +677,7 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
           ease: "power4.inOut",
         },
         onComplete: () => {
-          releaseTransition(isHomeIntent(pending.intent));
+          releaseTransition(pending.intent === "locale" || isHomeIntent(pending.intent));
         },
       });
 
@@ -531,6 +710,7 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      abortController.abort();
       frameIds.forEach((frameId) => {
         window.cancelAnimationFrame(frameId);
       });
@@ -540,7 +720,7 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
   }, [pathname, releaseTransition, transition]);
 
   useLayoutEffect(() => {
-    if (pathname !== "/" || pendingRef.current) {
+    if (pathname !== homePath || pendingRef.current) {
       return;
     }
 
@@ -578,13 +758,13 @@ export function CaseTransitionProvider({ children }: { children: ReactNode }) {
         window.cancelAnimationFrame(frameId);
       });
     };
-  }, [pathname]);
+  }, [homePath, pathname]);
 
   return (
-    <CaseTransitionContext.Provider value={{ closeCase, navigateHomeAnchor, openCase, prefetchCase, switchCase }}>
+    <CaseTransitionContext.Provider value={{ closeCase, navigateHomeAnchor, openCase, prefetchCase, switchCase, switchLocale }}>
       {children}
       {transition ? (
-        <div data-brand-transition-overlay ref={overlayRef}>
+        <div data-brand-transition-overlay ref={overlayRef} style={{ zIndex: 11000 }}>
           <div data-brand-transition-panel ref={panelRef}>
             <div data-brand-transition-noise />
             <span data-brand-transition-bloom data-bloom="a" />

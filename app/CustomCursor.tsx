@@ -6,6 +6,12 @@ const interactiveSelector =
   "a, button, input, textarea, select, label, [role='button'], [tabindex]:not([tabindex='-1'])";
 const lightCursorSurfaceSelector = ".site-footer, [data-cursor-theme='light']";
 
+function isInNativeScrollbarGutter(event: PointerEvent) {
+  const root = document.documentElement;
+
+  return event.clientX >= root.clientWidth || event.clientY >= root.clientHeight;
+}
+
 export default function CustomCursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +77,15 @@ export default function CustomCursor() {
     };
 
     const handlePointerMove = (event: PointerEvent) => {
+      if (isInNativeScrollbarGutter(event)) {
+        visible = false;
+        cursor.dataset.cursorVisible = "false";
+        cursor.dataset.cursorState = "idle";
+        document.documentElement.dataset.nativeCursor = "true";
+        return;
+      }
+
+      delete document.documentElement.dataset.nativeCursor;
       targetX = event.clientX;
       targetY = event.clientY;
 
@@ -90,6 +105,7 @@ export default function CustomCursor() {
       cursor.dataset.cursorVisible = "false";
       cursor.dataset.cursorState = "idle";
       cursor.dataset.cursorTheme = "dark";
+      delete document.documentElement.dataset.nativeCursor;
       isLightTheme = false;
       applyCursorPaint();
     };
@@ -124,6 +140,7 @@ export default function CustomCursor() {
       document.documentElement.removeEventListener("pointerleave", handlePointerLeave);
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("pointerup", handlePointerUp);
+      delete document.documentElement.dataset.nativeCursor;
     };
   }, []);
 

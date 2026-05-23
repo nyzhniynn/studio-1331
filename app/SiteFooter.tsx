@@ -1,28 +1,19 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { getDictionary } from "../dictionaries";
 import FooterHashLink from "./FooterHashLink";
-
-const footerMenuItems = [
-  { label: "Main", href: "/#top" },
-  { label: "Approach", href: "/#approach" },
-  { label: "Work", href: "/#work" },
-  { label: "Services", href: "/#services" },
-  { label: "Process", href: "/#process" },
-  { label: "Team", href: "/#team" },
-  { label: "Contact", href: "/#contact" },
-] as const;
-
-const footerServiceItems = [
-  "Strategic basis",
-  "Brand & Digital Identity",
-  "Website & Digital Platform",
-  "Redesign of existing products",
-] as const;
-
-const footerSocialItems = [
-  { label: "Instagram", shortLabel: "IG", href: "https://www.instagram.com/" },
-  { label: "Telegram", shortLabel: "TG", href: "https://t.me/" },
-] as const;
+import { getLocaleFromPathname } from "./i18n";
 
 export default function SiteFooter() {
+  const pathname = usePathname();
+  const dictionary = getDictionary(getLocaleFromPathname(pathname));
+  const footerMenuItems = dictionary.nav.mobileItems.map((item) => ({
+    ...item,
+    href: `/${item.href}` as `/#${string}`,
+  }));
+  const footerServiceItems = dictionary.home.services.items.map((item) => item.title);
+
   return (
     <footer
       className="site-footer"
@@ -33,7 +24,7 @@ export default function SiteFooter() {
         <div className="site-footer__directory">
           <section className="site-footer__panel site-footer__panel--services" aria-labelledby="site-footer-services">
             <p id="site-footer-services" className="site-footer__panel-label">
-              Services
+              {dictionary.footer.servicesLabel}
             </p>
             <ul className="site-footer__service-list">
               {footerServiceItems.map((item) => (
@@ -47,7 +38,7 @@ export default function SiteFooter() {
           </section>
 
           <nav className="site-footer__panel site-footer__panel--menu" aria-label="Footer navigation">
-            <p className="site-footer__panel-label">Menu</p>
+            <p className="site-footer__panel-label">{dictionary.footer.menuLabel}</p>
             <ul className="site-footer__menu-list">
               {footerMenuItems.map((item, index) => (
                 <li key={item.href}>
@@ -61,24 +52,24 @@ export default function SiteFooter() {
           </nav>
 
           <address className="site-footer__panel site-footer__panel--contacts">
-            <p className="site-footer__panel-label">Contacts</p>
-            <a className="site-footer__text-link" href="mailto:hello@1331.agency">
-              hello@1331.agency
+            <p className="site-footer__panel-label">{dictionary.footer.contactsLabel}</p>
+            <a className="site-footer__text-link" href={`mailto:${dictionary.footer.email}`}>
+              {dictionary.footer.email}
             </a>
             <FooterHashLink className="site-footer__text-link" href="/#contact">
-              Online studio
+              {dictionary.footer.onlineStudio}
             </FooterHashLink>
             <FooterHashLink className="site-footer__text-link" href="/#brief">
-              Start a project
+              {dictionary.footer.startProject}
             </FooterHashLink>
           </address>
 
           <section className="site-footer__panel site-footer__panel--socials" aria-labelledby="site-footer-socials">
             <p id="site-footer-socials" className="site-footer__panel-label">
-              Socials
+              {dictionary.footer.socialsLabel}
             </p>
             <div className="site-footer__social-grid">
-              {footerSocialItems.map((item) => (
+              {dictionary.footer.socialItems.map((item) => (
                 <a
                   className="site-footer__social-link"
                   href={item.href}

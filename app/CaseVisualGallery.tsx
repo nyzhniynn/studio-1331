@@ -1,15 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Dictionary } from "../dictionaries";
 
 type CaseVisualGalleryProps = {
+  dictionary: Dictionary;
   images: string[];
   title: string;
 };
 
-export default function CaseVisualGallery({ images, title }: CaseVisualGalleryProps) {
+function formatLabel(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (label, [key, value]) => label.replace(`{${key}}`, String(value)),
+    template,
+  );
+}
+
+export default function CaseVisualGallery({ dictionary, images, title }: CaseVisualGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const focusFrameRef = useRef(0);
   const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const labels = dictionary.caseDetail;
 
   const openLightbox = useCallback((index: number) => {
     if (window.matchMedia("(max-width: 767px)").matches) {
@@ -25,7 +36,8 @@ export default function CaseVisualGallery({ images, title }: CaseVisualGalleryPr
     setActiveIndex(null);
 
     if (index !== null) {
-      window.requestAnimationFrame(() => {
+      window.cancelAnimationFrame(focusFrameRef.current);
+      focusFrameRef.current = window.requestAnimationFrame(() => {
         triggerRefs.current[index]?.focus();
       });
     }
@@ -84,6 +96,12 @@ export default function CaseVisualGallery({ images, title }: CaseVisualGalleryPr
     };
   }, [activeIndex, closeLightbox, showNext, showPrevious]);
 
+  useEffect(() => {
+    return () => {
+      window.cancelAnimationFrame(focusFrameRef.current);
+    };
+  }, []);
+
   if (!images.length) {
     return null;
   }
@@ -94,7 +112,7 @@ export default function CaseVisualGallery({ images, title }: CaseVisualGalleryPr
         {images.map((image, index) => (
           <figure data-case-detail-visual key={`${image}-${index}`}>
             <button
-              aria-label={`Open ${title} slide ${index + 1}`}
+              aria-label={formatLabel(labels.openSlide, { title, index: index + 1 })}
               data-case-detail-visual-trigger
               onClick={() => openLightbox(index)}
               ref={(element) => {
@@ -110,7 +128,7 @@ export default function CaseVisualGallery({ images, title }: CaseVisualGalleryPr
 
       {activeIndex !== null ? (
         <div
-          aria-label={`${title} slide ${activeIndex + 1}`}
+          aria-label={formatLabel(labels.openSlide, { title, index: activeIndex + 1 })}
           aria-modal="true"
           data-case-lightbox
           onClick={(event) => {
@@ -121,7 +139,7 @@ export default function CaseVisualGallery({ images, title }: CaseVisualGalleryPr
           role="dialog"
         >
           <button
-            aria-label="Close image preview"
+            aria-label={labels.closePreview}
             data-case-lightbox-close
             onClick={closeLightbox}
             type="button"
@@ -132,7 +150,7 @@ export default function CaseVisualGallery({ images, title }: CaseVisualGalleryPr
           {images.length > 1 ? (
             <>
               <button
-                aria-label="Previous slide"
+                aria-label={labels.previousSlide}
                 data-case-lightbox-nav
                 data-direction="previous"
                 onClick={showPrevious}
@@ -141,7 +159,7 @@ export default function CaseVisualGallery({ images, title }: CaseVisualGalleryPr
                 <span aria-hidden="true" />
               </button>
               <button
-                aria-label="Next slide"
+                aria-label={labels.nextSlide}
                 data-case-lightbox-nav
                 data-direction="next"
                 onClick={showNext}

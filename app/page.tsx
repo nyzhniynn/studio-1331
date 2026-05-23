@@ -16,14 +16,18 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MotionOrchestrator from "./MotionOrchestrator";
 import FormChoiceRow from "./FormChoiceRow";
+import LanguageSwitcher from "./LanguageSwitcher";
 import {
-  caseStudies,
   getVisibleHomeCaseCountForSlug,
   homeCaseRevealStep,
   homeVisibleCaseCountKey,
+  publishedCaseStudies,
   type CaseStudy,
 } from "./caseData";
 import { useCaseTransition } from "./CaseTransitionProvider";
+import { defaultLocale, getCasePath, type Locale } from "./i18n";
+import { getLocalizedPublishedCaseStudies } from "./localizedCases";
+import { getDictionary, type Dictionary } from "../dictionaries";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,20 +39,10 @@ const caseHoverQuery = "(hover: hover) and (pointer: fine) and (prefers-reduced-
 const contactFileMaxSize = 4 * 1024 * 1024;
 const contactFileAccept = ".pdf,.png,.jpg,.jpeg,.zip,.doc,.docx";
 const contactAllowedFileExtensions = new Set(["pdf", "png", "jpg", "jpeg", "zip", "doc", "docx"]);
-const contactServiceOptions = [
-  "Strategic basis",
-  "Brand & Digital Identity",
-  "Website & Digital Platform",
-  "Redesign of existing products",
-] as const;
-const contactBudgetOptions = [
-  "Less than $20k",
-  "$20-$40k",
-  "$40-$60k",
-  "$60-$80k",
-  "$80-$100k",
-  "To infinity and beyond",
-] as const;
+
+function getBrandFontFamily() {
+  return "Instrument Serif";
+}
 
 type CaseHoverValues = {
   imageX: number;
@@ -71,6 +65,8 @@ type ContactFormStatus = "idle" | "loading" | "success" | "error";
 
 const baseCaseHoverTransform =
   "perspective(1200px) translate3d(0px, 0px, 0) rotateX(0deg) rotateY(0deg)";
+const homeCasePreviewCount = homeCaseRevealStep;
+const homeCaseShowMoreEnabled = false;
 
 function clampHoverAxis(value: number) {
   return Math.min(1, Math.max(-1, value));
@@ -128,23 +124,45 @@ function shouldSkipHomeIntro() {
   return typeof window !== "undefined" && window.sessionStorage.getItem(skipHomeIntroKey) === "true";
 }
 
+function setSiteIntroLock(active: boolean) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  if (active) {
+    document.documentElement.dataset.siteIntro = "true";
+    delete document.documentElement.dataset.siteReady;
+    return;
+  }
+
+  document.documentElement.dataset.siteReady = "true";
+  delete document.documentElement.dataset.siteIntro;
+}
+
+function getInitialHomeIntroState() {
+  return {
+    contentMounted: false,
+    introFinished: false,
+  };
+}
+
 function normalizeVisibleCaseCount(count: number) {
   if (!Number.isFinite(count)) {
-    return Math.min(homeCaseRevealStep, caseStudies.length);
+    return Math.min(homeCaseRevealStep, publishedCaseStudies.length);
   }
 
   const steppedCount = Math.ceil(Math.max(homeCaseRevealStep, count) / homeCaseRevealStep) * homeCaseRevealStep;
 
-  return Math.min(steppedCount, caseStudies.length);
+  return Math.min(steppedCount, publishedCaseStudies.length);
 }
 
 function readSavedVisibleCaseCount() {
   if (typeof window === "undefined") {
-    return Math.min(homeCaseRevealStep, caseStudies.length);
+    return Math.min(homeCaseRevealStep, publishedCaseStudies.length);
   }
 
   if (window.sessionStorage.getItem(restoreHomeScrollKey) !== "true") {
-    return Math.min(homeCaseRevealStep, caseStudies.length);
+    return Math.min(homeCaseRevealStep, publishedCaseStudies.length);
   }
 
   return normalizeVisibleCaseCount(Number(window.sessionStorage.getItem(homeVisibleCaseCountKey)));
@@ -158,12 +176,21 @@ function saveVisibleCaseCount(count: number) {
   window.sessionStorage.setItem(homeVisibleCaseCountKey, String(normalizeVisibleCaseCount(count)));
 }
 
-export default function Home() {
-  const contentMountedRef = useRef(false);
+type HomeProps = {
+  dictionary?: Dictionary;
+  locale?: Locale;
+};
+
+export default function Home({
+  dictionary = getDictionary(defaultLocale),
+  locale = defaultLocale,
+}: HomeProps = {}) {
+  const [initialIntroState] = useState(getInitialHomeIntroState);
+  const contentMountedRef = useRef(initialIntroState.contentMounted);
   const contentReadyPromiseRef = useRef<Promise<void> | null>(null);
   const contentReadyResolverRef = useRef<(() => void) | null>(null);
-  const [contentMounted, setContentMounted] = useState(false);
-  const [introFinished, setIntroFinished] = useState(false);
+  const [contentMounted, setContentMounted] = useState(initialIntroState.contentMounted);
+  const [introFinished, setIntroFinished] = useState(initialIntroState.introFinished);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const prepareContent = useCallback(() => {
@@ -185,19 +212,28 @@ export default function Home() {
     contentMountedRef.current = true;
     setContentMounted(true);
     setIntroFinished(true);
+    setSiteIntroLock(false);
   }, []);
 
   useLayoutEffect(() => {
     if (shouldSkipHomeIntro()) {
       window.sessionStorage.removeItem(skipHomeIntroKey);
       contentMountedRef.current = true;
+      setSiteIntroLock(false);
 
       // This must happen in layout effect so case-return hydration stays stable
       // while the restored home page is ready before the first visible frame.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setContentMounted(true);
       setIntroFinished(true);
+      return;
     }
+
+    setSiteIntroLock(true);
+
+    return () => {
+      setSiteIntroLock(false);
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -213,7 +249,7 @@ export default function Home() {
       secondFrame = window.requestAnimationFrame(() => {
         const heroBrandFontReady =
           "fonts" in document
-            ? document.fonts.load('64px "Instrument Serif"').catch(() => undefined)
+            ? document.fonts.load(`64px "${getBrandFontFamily()}"`).catch(() => undefined)
             : Promise.resolve();
 
         heroBrandFontReady.then(() => {
@@ -250,13 +286,22 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[#f4f4ef] p-3 pb-8 sm:p-5">
-      <MobileMenu
-        introActive={!introFinished}
-        isOpen={mobileMenuOpen}
-        onNavigate={() => setMobileMenuOpen(false)}
-        onToggle={() => setMobileMenuOpen((isOpen) => !isOpen)}
-      />
-      {contentMounted ? <MainPageContent introActive={!introFinished} /> : null}
+      {introFinished ? (
+        <MobileMenu
+          dictionary={dictionary}
+          isOpen={mobileMenuOpen}
+          onNavigate={() => setMobileMenuOpen(false)}
+          onToggle={() => setMobileMenuOpen((isOpen) => !isOpen)}
+        />
+      ) : null}
+      {contentMounted ? (
+        <MainPageContent
+          key={locale}
+          dictionary={dictionary}
+          introActive={!introFinished}
+          locale={locale}
+        />
+      ) : null}
       {!introFinished ? (
         <IntroOverlay onPrepareContent={prepareContent} onComplete={finishIntro} />
       ) : null}
@@ -264,7 +309,15 @@ export default function Home() {
   );
 }
 
-function MainPageContent({ introActive }: { introActive: boolean }) {
+function MainPageContent({
+  dictionary,
+  introActive,
+  locale,
+}: {
+  dictionary: Dictionary;
+  introActive: boolean;
+  locale: Locale;
+}) {
   const caseGridRef = useRef<HTMLDivElement>(null);
   const caseHoverFrameRef = useRef<number | null>(null);
   const activeCaseHoverMediaRef = useRef<HTMLElement | null>(null);
@@ -288,8 +341,14 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
   const [contactServices, setContactServices] = useState<string[]>([]);
   const [visibleCaseCount, setVisibleCaseCount] = useState(initialVisibleCaseCount);
   const { openCase, prefetchCase } = useCaseTransition();
-  const visibleCases = caseStudies.slice(0, visibleCaseCount);
-  const hasMoreCases = visibleCaseCount < caseStudies.length;
+  const localizedCaseStudies = getLocalizedPublishedCaseStudies(dictionary);
+  const visibleCaseLimit = homeCaseShowMoreEnabled ? visibleCaseCount : homeCasePreviewCount;
+  const visibleCases = localizedCaseStudies.slice(0, visibleCaseLimit);
+  const hasMoreCases = homeCaseShowMoreEnabled && visibleCaseCount < localizedCaseStudies.length;
+  const home = dictionary.home;
+  const brief = home.brief;
+  const primaryRoleLabelLines = home.team.primaryRoleLabelLines;
+  const secondaryRoleLabelLines = home.team.secondaryRoleLabelLines;
 
   const updateActiveTeamSlide = useCallback(() => {
     const carousel = teamCarouselRef.current;
@@ -332,7 +391,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
   const showMoreCases = useCallback(() => {
     setVisibleCaseCount((currentCount) => {
-      const nextCount = Math.min(currentCount + homeCaseRevealStep, caseStudies.length);
+      const nextCount = Math.min(currentCount + homeCaseRevealStep, publishedCaseStudies.length);
 
       saveVisibleCaseCount(nextCount);
 
@@ -346,7 +405,10 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
   ) => {
     const requiredVisibleCount = getVisibleHomeCaseCountForSlug(caseStudy.slug);
 
-    saveVisibleCaseCount(Math.max(visibleCaseCount, requiredVisibleCount));
+    if (homeCaseShowMoreEnabled) {
+      saveVisibleCaseCount(Math.max(visibleCaseCount, requiredVisibleCount));
+    }
+
     openCase(event, caseStudy);
   }, [openCase, visibleCaseCount]);
 
@@ -461,7 +523,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
     if (invalidFile) {
       setContactFormStatus("error");
-      setContactFormMessage(`${invalidFile.name} is not supported or is larger than 4MB.`);
+      setContactFormMessage(brief.fileTooLarge.replace("{fileName}", invalidFile.name));
       return;
     }
 
@@ -470,7 +532,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
     if (currentSize + incomingSize > contactFileMaxSize) {
       setContactFormStatus("error");
-      setContactFormMessage("Attachments are too large for this form. Please keep the total upload under 4MB.");
+      setContactFormMessage(brief.totalFilesTooLarge);
       return;
     }
 
@@ -490,7 +552,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
       return nextFiles;
     });
-  }, [attachedContactFiles, clearContactFeedback]);
+  }, [attachedContactFiles, brief.fileTooLarge, brief.totalFilesTooLarge, clearContactFeedback]);
 
   const handleContactFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     if (event.currentTarget.files) {
@@ -574,13 +636,15 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
       resetContactForm();
       setContactFormStatus("success");
-      setContactFormMessage("Request sent. We will contact you soon.");
+      setContactFormMessage(brief.success);
     } catch (error) {
       setContactFormStatus("error");
-      setContactFormMessage(error instanceof Error ? error.message : "Could not send the request. Please try again.");
+      setContactFormMessage(error instanceof Error ? error.message : brief.error);
     }
   }, [
     attachedContactFiles,
+    brief.error,
+    brief.success,
     contactBudget,
     contactFields,
     contactFormStatus,
@@ -684,9 +748,12 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
   }, [visibleCaseCount]);
 
   return (
-    <div data-motion-main-state={introActive ? "intro" : "ready"} className="contents">
-      {!introActive ? <MotionOrchestrator /> : null}
-      <DesktopMenu />
+    <div
+      data-motion-locale={locale}
+      data-motion-main-state={introActive ? "intro" : "ready"}
+      className="contents"
+    >
+      {!introActive ? <DesktopMenu dictionary={dictionary} /> : null}
       <section id="top" data-motion-hero className="relative h-[calc(220vh-2.75rem)] w-full overflow-visible bg-[#f4f4ef] text-[#1E1E1E] sm:h-[calc(220vh-2.5rem)]">
         <div data-motion-hero-stage className="hero-panel sticky top-3 z-20 h-[calc(100vh-2.75rem)] w-full overflow-hidden rounded-[24px] sm:top-5 sm:h-[calc(100vh-2.5rem)]">
           <div data-motion-yellow-layer className="absolute inset-0 z-10 overflow-hidden rounded-[inherit] bg-[#FFFB12]">
@@ -694,31 +761,29 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
             <div className="relative z-10 flex h-full flex-col px-8 pt-7 pb-9">
               <p data-motion-hero-brand className="hero-brand font-serif text-[64px] leading-[90%] tracking-[-0.02em]">
-                13:31 Studio
+                {home.hero.brand}
               </p>
 
-              <div data-motion-hero-copy className="mt-auto pb-[clamp(0rem,1.5vh,1.5rem)]">
+              <div
+                data-motion-hero-copy
+                className="mt-auto pb-[clamp(0rem,1.5vh,1.5rem)]"
+              >
                 <h1 data-motion-hero-title className="hero-title font-serif text-[clamp(72px,15vh,136px)] leading-[90%] tracking-[-0.02em]">
-                  <span data-motion-hero-line className="block italic">
-                    Modern websites
-                  </span>
-                  <span data-motion-hero-line className="block">
-                    for companies that have 
-                  </span>
-                  <span data-motion-hero-line className="block">
-                    outgrown templates
-                  </span>
+                  {home.hero.titleLines.map((line, index) => (
+                    <span data-motion-hero-line className={`block ${index === 0 ? "italic" : ""}`} key={line}>
+                      {line}
+                    </span>
+                  ))}
                 </h1>
                 <p
                   className="hero-caption mt-[clamp(1.25rem,1.5vw,2rem)] uppercase leading-[120%] tracking-[-0.02em] text-[#0D0D0D]"
                   style={{ fontFamily: 'var(--font-inter-black)', fontSize: "clamp(16px, 2.7vh, 24px)" }}
                 >
-                  <span className="hero-caption-line whitespace-nowrap">
-                    Custom design aligned with your
-                  </span>
-                  <span className="hero-caption-line whitespace-nowrap">
-                    strategy and scale
-                  </span>
+                  {home.hero.captionLines.map((line) => (
+                    <span className="hero-caption-line whitespace-nowrap" key={line}>
+                      {line}
+                    </span>
+                  ))}
                 </p>
               </div>
             </div>
@@ -729,56 +794,45 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
       <section id="approach" data-motion-section data-motion-stack className="relative -mt-[calc(120vh-2.75rem)] bg-[#f4f4ef] px-2 pt-[clamp(8rem,12vh,9rem)] pb-0 text-[#1E1E1E] sm:-mt-[calc(120vh-2.5rem)]">
         <div className="mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8">
           <p className="col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-extrabold uppercase leading-none tracking-[-0.035em] lg:col-span-3">
-            Who are we helping
+            {home.approach.label}
           </p>
 
           <h2 className="who-help-mobile-title col-span-12 mt-10 font-serif text-[64px] leading-[70px] tracking-[-0.025em] text-[#141714] md:hidden">
-            <span className="block">We work with mature</span>
-            <span className="block">companies, technology</span>
-            <span className="block">businesses, and professional</span>
-            <span className="block">service providers that have</span>
-            <span className="block">complex products or require</span>
-            <span className="block">a long decision-making</span>
-            <span className="block">process.</span>
+            {home.approach.mobileTitleLines.map((line) => (
+              <span className="block" key={line}>{line}</span>
+            ))}
           </h2>
 
-          <h2 className="hidden col-span-12 mt-10 max-w-[1420px] font-serif text-[64px] leading-[70px] tracking-[-0.025em] text-[#141714] md:block lg:col-start-3 lg:col-end-12 lg:mt-0">
-            <span className="block pl-[330px] whitespace-nowrap">
-              We work with mature companies, technology businesses,
-            </span>
-            <span className="block whitespace-nowrap">
-              and professional service providers that have complex products or require a
-            </span>
-            <span className="block whitespace-nowrap">
-              long decision-making process.
-            </span>
-          </h2>
+          {locale === "ru" ? (
+            <h2 className="hidden col-span-12 mt-10 max-w-none font-serif text-[clamp(3rem,4.1vw,4.1rem)] font-normal leading-[0.93] tracking-[-0.025em] text-[#141714] md:block lg:col-start-3 lg:col-end-13 lg:mt-0" data-approach-title>
+              {home.approach.desktopTitleLines.map((line, index) => (
+                <span className={`block whitespace-nowrap ${index === 0 ? "pl-[clamp(12rem,17vw,19.5rem)]" : ""}`} key={line}>
+                  {line}
+                </span>
+              ))}
+            </h2>
+          ) : (
+            <h2 className="hidden col-span-12 mt-10 max-w-[1420px] font-serif text-[64px] leading-[70px] tracking-[-0.025em] text-[#141714] md:block lg:col-start-3 lg:col-end-12 lg:mt-0">
+              {home.approach.desktopTitleLines.map((line, index) => (
+                <span className={`block whitespace-nowrap ${index === 0 ? "pl-[330px]" : ""}`} key={line}>
+                  {line}
+                </span>
+              ))}
+            </h2>
+          )}
 
           <div className="col-span-12 mt-[60px] grid grid-cols-12 gap-x-8 gap-y-14">
             <p className="col-span-12 max-w-[35rem] font-sans text-[clamp(1.25rem,1.25vw,1.55rem)] leading-[1.25] tracking-[-0.035em] lg:col-start-3 lg:col-end-6">
-              <span className="block md:hidden">
-                Clarity, trust, and a sense
-              </span>
-              <span className="block md:hidden">
-                of trustworthiness are important
-              </span>
-              <span className="block md:hidden">
-                to their audience&mdash;not visual noise.
-              </span>
-              <span className="hidden whitespace-nowrap md:block">
-                Clarity, trust, and a sense of trustworthiness are
-              </span>
-              <span className="hidden whitespace-nowrap md:block">
-                important to their audience&mdash;not visual noise.
-              </span>
+              {home.approach.trustMobileLines.map((line) => (
+                <span className="block md:hidden" key={line}>{line}</span>
+              ))}
+              {home.approach.trustDesktopLines.map((line) => (
+                <span className="hidden whitespace-nowrap md:block" key={line}>{line}</span>
+              ))}
             </p>
 
             <p className="col-span-12 w-full max-w-full font-sans text-[clamp(1.25rem,1.25vw,1.55rem)] leading-[1.25] tracking-[-0.035em] indent-[11rem] lg:col-start-7 lg:col-end-13">
-              Most often, projects involve redesigning outdated websites, structuring
-              a large amount of information, or adapting a digital image to the current scale of the
-              business. Budgets, the number of stakeholders, and requirements are usually high &mdash; this is 
-              where a thoughtful strategic approach is especially important.
-            
+              {home.approach.body}
             </p>
           </div>
 
@@ -796,20 +850,17 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
         <div className="mx-auto max-w-[1824px]">
             <header className="max-w-[1120px]">
               <h2 data-motion="reveal" className="w-fit font-serif text-[135px] leading-[1] tracking-[-0.030em] text-[#141714]">
-                Featured cases
+                {home.work.title}
               </h2>
               <p data-motion="reveal" className="mt-6 max-w-[540px] font-sans text-[20px] font-bold leading-[24px] tracking-[0em] text-[#141714] md:hidden">
-                <span className="block">WORKS CREATED AT MOMENTS</span>
-                <span className="block">OF GROWTH, CHANGE, AND</span>
-                <span className="block">BUSINESS REINVENTION</span>
+                {home.work.mobileDescriptionLines.map((line) => (
+                  <span className="block" key={line}>{line}</span>
+                ))}
               </p>
               <p data-motion="reveal" className="mt-6 hidden max-w-[540px] font-sans text-[20px] font-bold leading-[24px] tracking-[0em] text-[#141714] md:block">
-                <span className="block whitespace-nowrap">
-                  WORKS CREATED AT MOMENTS OF GROWTH, CHANGE,
-                </span>
-                <span className="block whitespace-nowrap">
-                  AND BUSINESS REINVENTION
-                </span>
+                {home.work.desktopDescriptionLines.map((line) => (
+                  <span className="block whitespace-nowrap" key={line}>{line}</span>
+                ))}
               </p>
           </header>
 
@@ -830,7 +881,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                 >
                   <a
                     data-case-card-link
-                    href={`/cases/${caseStudy.slug}`}
+                    href={getCasePath(caseStudy.slug, locale)}
                     onClick={(event) => handleOpenCase(event, caseStudy)}
                     onPointerEnter={() => prefetchCase(caseStudy)}
                   >
@@ -866,7 +917,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                 onClick={showMoreCases}
                 type="button"
               >
-                Show more
+                {home.work.showMore}
               </button>
             </div>
           ) : null}
@@ -877,23 +928,24 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
         <div className="mx-auto max-w-[1824px]">
           <header>
             <h2 data-motion="reveal" className="inline-flex items-start gap-[18px] font-serif text-[135px] leading-[0.82] tracking-[-0.02em] text-[#141714]">
-              Services{" "}
+              {home.services.title}{" "}
               <span className="translate-y-[4px] font-serif text-[64px] font-normal leading-[0.82] tracking-[-0.02em] text-[#141714]">
-                (4)
+                {home.services.count}
               </span>
             </h2>
             <p data-motion="reveal" className="mt-6 max-w-[48rem] font-sans text-[20px] font-bold uppercase leading-[24px] tracking-[0em] text-[#141714]">
-              Each format is a complete system for working with
-              <br />
-              a specific task. We don&apos;t work in the format of
-              <br />
-              small tasks or quick launches.
+              {(home.services.mobileDescriptionLines ?? home.services.descriptionLines).map((line) => (
+                <span className="block md:hidden" key={`mobile-${line}`}>{line}</span>
+              ))}
+              {home.services.descriptionLines.map((line) => (
+                <span className="hidden md:block" key={`desktop-${line}`}>{line}</span>
+              ))}
             </p>
           </header>
 
           <div className="mt-[clamp(9rem,13vw,13rem)] space-y-[clamp(6rem,8vw,9rem)]">
-            {services.map((service) => (
-              <ServiceItem key={service.index} service={service} />
+            {home.services.items.map((service) => (
+              <ServiceItem key={service.index} productLabel={home.services.productLabel} service={service} />
             ))}
           </div>
         </div>
@@ -902,25 +954,30 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
       <section id="process" data-motion-section data-motion-stack data-motion-preset="process" className="bg-[#f4f4ef] px-2 pt-[clamp(5rem,8vw,8rem)] pb-0 text-[#1E1E1E]">
         <div className="mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8">
           <p data-motion="reveal" className="col-span-12 font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-extrabold uppercase leading-none tracking-[-0.035em] lg:col-span-3">
-            How we work
+            {home.process.label}
           </p>
 
           <h2 data-motion="reveal" className="col-span-12 mt-8 max-w-[52rem] font-serif text-[clamp(2.75rem,2.55vw,3.4rem)] leading-[1.04] tracking-[-0.045em] lg:col-start-5 lg:col-end-10 lg:mt-0">
-            <span className="block whitespace-nowrap">
-              A structured process allows you to work with
-            </span>
-            <span className="block whitespace-nowrap">
-              complex tasks without chaos.
-            </span>
+            {(home.process.mobileHeadlineLines ?? home.process.headlineLines).map((line) => (
+              <span className="block md:hidden" key={`mobile-${line}`}>
+                {line}
+              </span>
+            ))}
+            {home.process.headlineLines.map((line) => (
+              <span className="hidden whitespace-nowrap md:block" key={`desktop-${line}`}>
+                {line}
+              </span>
+            ))}
           </h2>
 
           <div className="col-span-12 mt-[260px] space-y-[clamp(5rem,7vw,8rem)]">
-            {processSteps.map((step, index) => (
+            {home.process.steps.map((step, index) => (
               <ProcessStep
                 key={step.number}
+                detailsLabel={home.process.detailsLabel}
                 step={step}
                 alignRight={index % 2 === 1}
-                compactTop={step.title === "Design"}
+                compactTop={index === 2}
               />
             ))}
           </div>
@@ -930,44 +987,39 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
       <section id="team" data-motion-section data-motion-stack data-motion-preset="team" className="bg-[#f4f4ef] px-2 pt-[220px] pb-[clamp(6rem,9vw,9rem)] text-[#1E1E1E]">
         <div className="relative mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8">
           <p data-motion="reveal" className="col-span-12 font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-extrabold uppercase leading-[1.05] tracking-[-0.035em] lg:absolute lg:left-0 lg:top-0 lg:w-[22rem]">
-            <span className="block">Who works on</span>
-            <span className="block">projects</span>
+            {home.team.eyebrowLines.map((line) => (
+              <span className="block" key={line}>{line}</span>
+            ))}
           </p>
 
           <h2 data-motion="reveal" className="team-mobile-title col-span-12 mt-8 font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714] md:hidden">
-            <span className="block">Each project is conducted</span>
-            <span className="block">personally by key studio</span>
-            <span className="block">specialists. We do not work</span>
-            <span className="block">on a pipeline model</span>
-            <span className="block">and take on a limited</span>
-            <span className="block">number of tasks at the</span>
-            <span className="block">same time.</span>
+            {home.team.introMobileLines.map((line) => <span className="block" key={line}>{line}</span>)}
           </h2>
 
-          <h2 data-motion="reveal" className="hidden col-span-12 mt-8 overflow-hidden font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714] md:block lg:mt-0 lg:translate-x-[250px]">
-            <span className="block lg:pl-[360px]">
-              Each project is conducted personally by key studio
-            </span>
-            <span className="block lg:pl-[60px]">
-              specialists. We do not work on a pipeline model and take on a limited
-            </span>
-            <span className="block lg:pl-[60px]">
-              number of tasks at the same time.
-            </span>
-          </h2>
+          {locale === "ru" ? (
+            <h2 data-motion="reveal" data-team-intro-title className="hidden col-span-12 mt-8 max-w-[70rem] pb-[0.12em] font-serif text-[clamp(3.35rem,3.55vw,4rem)] leading-[0.94] tracking-[-0.02em] text-[#141714] md:block lg:col-start-1 lg:col-end-11 lg:mt-0 lg:pl-[clamp(9rem,18vw,17rem)]">
+              {home.team.introDesktopLines.map((line, index) => (
+                <span className={`block whitespace-nowrap ${index === 0 ? "lg:pl-[clamp(5rem,8vw,9rem)]" : ""}`} key={line}>{line}</span>
+              ))}
+            </h2>
+          ) : (
+            <h2 data-motion="reveal" className="hidden col-span-12 mt-8 overflow-hidden font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714] md:block lg:mt-0 lg:translate-x-[250px]">
+              {home.team.introDesktopLines.map((line, index) => (
+                <span className={`block ${index === 0 ? "lg:pl-[360px]" : "lg:pl-[60px]"}`} key={line}>{line}</span>
+              ))}
+            </h2>
+          )}
 
           <div data-team-primary-roles className="col-span-12 mt-[70px] grid grid-cols-1 gap-y-4 lg:grid-cols-12 lg:gap-x-8 lg:col-start-3 lg:col-end-11">
             <div className="col-span-12 grid grid-cols-1 gap-y-4 lg:grid-cols-12 lg:gap-x-8">
               <p data-team-role-label className="col-span-12 font-sans text-[20px] font-normal leading-[24px] tracking-[0em] text-[#141714] lg:col-span-3">
-                <span className="block">Who runs the</span>
-                <span className="block">projects</span>
+                {primaryRoleLabelLines.map((line) => (
+                  <span className="block" key={line}>{line}</span>
+                ))}
               </p>
               <ul data-team-role-list className="col-span-12 font-sans text-[20px] leading-[24px] tracking-[0em] text-[#141714] lg:col-span-9 lg:-translate-x-[120px]">
-                {projectRoles[0].items.map((item) => (
-                  <li key={item} className="flex gap-4">
-                    <span aria-hidden="true" className="translate-y-[3px] text-[28px] leading-[18px]">
-                      &middot;
-                    </span>
+                {home.team.projectRoles[0].items.map((item) => (
+                  <li key={item}>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -978,15 +1030,13 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
           <div className="col-span-12 mt-8 grid grid-cols-1 gap-x-8 lg:grid-cols-5">
             <div data-team-secondary-roles className="grid max-w-full grid-cols-1 gap-y-4 lg:grid-cols-[160px_minmax(0,1fr)] lg:gap-x-8 lg:col-start-3 lg:col-end-6">
                 <p data-team-role-label className="font-sans text-[20px] font-normal leading-[24px] tracking-[0em] text-[#141714]">
-                  <span className="block">Interaction</span>
-                  <span className="block">format</span>
+                  {secondaryRoleLabelLines.map((line) => (
+                    <span className="block" key={line}>{line}</span>
+                  ))}
                 </p>
                 <ul data-team-role-list className="font-sans text-[20px] leading-[24px] tracking-[0em] text-[#141714]">
-                  {projectRoles[1].items.map((item) => (
-                    <li key={item} className="flex gap-4">
-                      <span aria-hidden="true" className="translate-y-[3px] text-[28px] leading-[18px]">
-                        &middot;
-                      </span>
+                  {home.team.projectRoles[1].items.map((item) => (
+                    <li key={item}>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -1000,7 +1050,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
             onScroll={updateActiveTeamSlide}
             className="col-span-12 mt-[clamp(8rem,12vw,12rem)] flex snap-x snap-mandatory gap-4 overflow-x-auto md:grid md:grid-cols-5 md:gap-x-8 md:gap-y-10 md:overflow-visible"
           >
-            {teamMembers.map((member) => (
+            {home.team.members.map((member) => (
               <article data-motion-team-card className="motion-case w-[78vw] max-w-[21rem] shrink-0 snap-start md:w-auto md:max-w-none md:shrink" key={member.name}>
                 <div data-motion-team-media className="motion-media h-[clamp(20rem,96vw,26rem)] bg-[#D9D9D9] md:h-[clamp(18rem,24vw,26rem)]">
                   <img
@@ -1015,7 +1065,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
             ))}
           </div>
           <div data-team-carousel-dots className="col-span-12 mt-5">
-            {teamMembers.map((member, index) => (
+            {home.team.members.map((member, index) => (
               <button
                 type="button"
                 data-team-carousel-dot
@@ -1033,12 +1083,15 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
       <section id="brief" data-motion-section data-motion-stack data-motion-preset="form" className="bg-[#f4f4ef] px-2 pt-[120px] pb-[120px] text-[#1E1E1E]">
         <div className="mx-auto max-w-[1824px]">
           <h2 data-motion="reveal" className="font-serif text-[135px] leading-[90%] tracking-[-0.02em] text-[#141714]">
-            Tell us about the task
+            {brief.title}
           </h2>
           <p data-motion="reveal" className="mt-[28px] max-w-[760px] font-sans text-[20px] font-bold uppercase leading-[24px] tracking-[0em] text-[#141714]">
-            Briefly describe the project or context. We will contact
-            <br />
-            you and suggest further steps.
+            {(brief.mobileIntroTextLines ?? brief.introTextLines).map((line) => (
+              <span className="block md:hidden" key={`mobile-${line}`}>{line}</span>
+            ))}
+            {brief.introTextLines.map((line) => (
+              <span className="hidden md:block" key={`desktop-${line}`}>{line}</span>
+            ))}
           </p>
 
           <form
@@ -1047,26 +1100,26 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
             onSubmit={handleContactSubmit}
           >
             <FormChoiceRow
-              title="Services"
+              title={brief.servicesTitle}
               name="services"
               onSelectedChange={(selected) => {
                 clearContactFeedback();
                 setContactServices(selected);
               }}
-              options={[...contactServiceOptions]}
+              options={brief.serviceOptions}
               selectedOptions={contactServices}
               serif
             />
 
             <FormChoiceRow
-              title="Budget"
+              title={brief.budgetTitle}
               multiple={false}
               name="budget"
               onSelectedChange={(selected) => {
                 clearContactFeedback();
                 setContactBudget(selected);
               }}
-              options={[...contactBudgetOptions]}
+              options={brief.budgetOptions}
               selectedOptions={contactBudget}
               serif
             />
@@ -1077,14 +1130,14 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
               onDrop={handleContactFileDrop}
             >
               <p className="font-serif text-[64px] italic leading-[0.88] tracking-[-0.03em] text-[#141714]">
-                Task
+                {brief.taskTitle}
               </p>
               <textarea
-                aria-label="Task"
+                aria-label={brief.taskTitle}
                 className="motion-field mt-[38px] block min-h-[35px] w-full max-w-[1490px] resize-none border-0 border-b border-[#BFBFB8] bg-transparent px-0 pb-[10px] font-serif text-[20px] leading-[24px] tracking-[0em] text-[#141714] outline-none placeholder:text-[#A9A9A2]"
                 name="task"
                 onChange={handleContactFieldChange}
-                placeholder="Launch and maintenance"
+                placeholder={brief.taskPlaceholder}
                 rows={1}
                 value={contactFields.task}
               />
@@ -1102,7 +1155,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                 className="motion-link mt-[22px] font-serif text-[24px] leading-none tracking-[-0.02em] text-[#141714]"
                 onClick={() => contactFileInputRef.current?.click()}
               >
-                + Attach a file
+                {brief.attachFile}
               </button>
               {attachedContactFiles.length ? (
                 <ul className="mt-4 grid max-w-[1490px] gap-2 font-sans text-[14px] leading-[18px] text-[#141714]">
@@ -1110,12 +1163,12 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                     <li className="flex items-center justify-between gap-4 border-b border-[#D4D4CD] pb-2" key={`${file.name}-${file.size}-${file.lastModified}`}>
                       <span className="min-w-0 truncate">{file.name}</span>
                       <button
-                        aria-label={`Remove ${file.name}`}
+                        aria-label={brief.removeFileAria.replace("{fileName}", file.name)}
                         className="font-bold uppercase text-[#9A9A9A]"
                         onClick={() => removeContactFile(index)}
                         type="button"
                       >
-                        Remove
+                        {brief.removeFile}
                       </button>
                     </li>
                   ))}
@@ -1125,24 +1178,25 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
 
             <div data-motion-form-item className="pt-[10px]">
               <p className="font-serif text-[64px] italic leading-[0.88] tracking-[-0.03em] text-[#141714]">
-                Contacts
+                {brief.contactsTitle}
               </p>
 
               <div className="mt-[48px] grid grid-cols-1 gap-x-8 gap-y-12 lg:grid-cols-2 lg:max-w-[1480px]">
-                <FormLineField label="Name" name="name" onChange={handleContactFieldChange} value={contactFields.name} />
-                <FormLineField label="Company" name="company" onChange={handleContactFieldChange} value={contactFields.company} />
-                <FormLineField label="E-mail" name="email" onChange={handleContactFieldChange} value={contactFields.email} />
-                <FormLineField label="Phone" name="phone" onChange={handleContactFieldChange} value={contactFields.phone} />
+                <FormLineField label={brief.fields.name} name="name" onChange={handleContactFieldChange} type="text" value={contactFields.name} />
+                <FormLineField label={brief.fields.company} name="company" onChange={handleContactFieldChange} type="text" value={contactFields.company} />
+                <FormLineField label={brief.fields.email} name="email" onChange={handleContactFieldChange} type="email" value={contactFields.email} />
+                <FormLineField label={brief.fields.phone} name="phone" onChange={handleContactFieldChange} type="tel" value={contactFields.phone} />
               </div>
 
               <div className="mt-[58px] grid grid-cols-1 gap-x-8 gap-y-8 lg:max-w-[1480px] lg:grid-cols-2 lg:items-end">
                 <div className="max-w-[620px] font-sans text-[16px] font-normal leading-[20px] tracking-[0em] text-[#1E1E1E]">
                   <p>
-                    By clicking on the &quot;Submit request&quot; button, I consent to the processing
-                    <br />
-                    of personal data and confirm that I have read the terms and conditions.
-                    <br />
-                    Personal Data Processing Policies
+                    {(brief.mobileConsentLines ?? brief.consentLines).map((line) => (
+                      <span className="block md:hidden" key={`mobile-${line}`}>{line}</span>
+                    ))}
+                    {brief.consentLines.map((line) => (
+                      <span className="hidden md:block" key={`desktop-${line}`}>{line}</span>
+                    ))}
                   </p>
                   {contactFormMessage ? (
                     <p
@@ -1159,7 +1213,7 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
                   type="submit"
                   className="motion-button h-[58px] w-[360px] border border-[#BFBFB8] font-sans text-[18px] font-bold uppercase leading-none tracking-[0em] text-[#141714] lg:justify-self-start"
                 >
-                  {contactFormStatus === "loading" ? "Sending" : "Send"}
+                  {contactFormStatus === "loading" ? brief.sending : brief.send}
                 </button>
               </div>
             </div>
@@ -1170,80 +1224,57 @@ function MainPageContent({ introActive }: { introActive: boolean }) {
       <section id="contact" data-motion-section data-motion-preset="contact" className="bg-[#f4f4ef] px-0 pt-[150px] pb-[60px] text-[#1E1E1E]">
         <div className="mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8 rounded-[24px] bg-[#FFFB12] px-4 pt-[110px] pb-[70px] sm:px-6 lg:px-3">
           <p className="col-span-12 font-sans text-[20px] font-bold uppercase leading-[24px] tracking-[0em] text-[#141714] lg:col-span-2 lg:pt-[12px]">
-            <span className="block">Creative</span>
-            <span className="block">collaborations</span>
+            {home.contact.labelLines.map((line) => (
+              <span className="block" key={line}>{line}</span>
+            ))}
           </p>
 
           <div className="col-span-12 mt-10 lg:col-start-3 lg:col-end-13 lg:mt-0">
-            <p className="font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714]">
-              <span className="block lg:pl-[300px] lg:whitespace-nowrap">
-                We are always interested in working with creative people.
-              </span>
-              {" "}
-              <span className="block lg:whitespace-nowrap">
-                If you work with augmented reality, 3D, animation, projections, or
-              </span>
-              {" "}
-              <span className="block lg:whitespace-nowrap">
-                anything else, please send a message to hello@1331.agency and we&apos;ll
-              </span>
-              {" "}
-              <span className="block lg:whitespace-nowrap">
-                come up with something interesting together
-              </span>
+            <p data-contact-copy className="font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714]">
+              {home.contact.textLines.map((line, index) => (
+                <span className={`block ${locale !== "ru" ? "lg:whitespace-nowrap" : ""} ${index === 0 && locale !== "ru" ? "lg:pl-[300px]" : ""}`} key={line}>
+                  {line}
+                  {index < home.contact.textLines.length - 1 ? " " : ""}
+                </span>
+              ))}
             </p>
           </div>
 
           <div className="col-span-12 mt-[120px] text-center lg:col-start-1 lg:col-end-13">
             <a
-              href="mailto:hello@1331.agency"
+              data-contact-email
+              href={`mailto:${home.contact.email}`}
               className="motion-email whitespace-nowrap font-serif text-[clamp(4rem,16.5vw,19.5rem)] leading-[90%] tracking-[-0.03em] text-[#141714]"
             >
-              hello@1331.agency
+              {home.contact.email}
             </a>
           </div>
         </div>
       </section>
 
+      {!introActive ? <MotionOrchestrator key={locale} /> : null}
     </div>
   );
 }
 
-const desktopMenuItems = [
-  { label: "Approach", href: "#approach" },
-  { label: "Work", href: "#work" },
-  { label: "Services", href: "#services" },
-  { label: "Process", href: "#process" },
-  { label: "Team", href: "#team" },
-] as const;
-
-const mobileMenuItems = [
-  { label: "Main", href: "#top" },
-  { label: "Approach", href: "#approach" },
-  { label: "Work", href: "#work" },
-  { label: "Services", href: "#services" },
-  { label: "Process", href: "#process" },
-  { label: "Team", href: "#team" },
-  { label: "Contact", href: "#contact" },
-] as const;
-
-function DesktopMenu() {
+function DesktopMenu({ dictionary }: { dictionary: Dictionary }) {
   return (
     <nav data-desktop-menu aria-label="Primary navigation">
       <div data-desktop-menu-surface>
-        <a data-desktop-menu-brand href="#top" aria-label="13:31 Studio, back to top">
+        <a data-desktop-menu-brand href="#top" aria-label={dictionary.nav.brandAria}>
           13:31
         </a>
         <div data-desktop-menu-links>
-          {desktopMenuItems.map((item, index) => (
+          {dictionary.nav.desktopItems.map((item, index) => (
             <a data-desktop-menu-link href={item.href} key={item.href}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               {item.label}
             </a>
           ))}
         </div>
+        <LanguageSwitcher />
         <a data-desktop-menu-cta href="#brief">
-          Start a project
+          {dictionary.nav.startProject}
         </a>
       </div>
     </nav>
@@ -1251,23 +1282,23 @@ function DesktopMenu() {
 }
 
 function MobileMenu({
-  introActive,
+  dictionary,
   isOpen,
   onNavigate,
   onToggle,
 }: {
-  introActive: boolean;
+  dictionary: Dictionary;
   isOpen: boolean;
   onNavigate: () => void;
   onToggle: () => void;
 }) {
   return (
-    <nav data-mobile-menu data-intro={introActive} data-open={isOpen} aria-label="Mobile navigation">
+    <nav data-mobile-menu data-open={isOpen} aria-label="Mobile navigation">
       <button
         type="button"
         data-mobile-menu-toggle
         aria-controls="mobile-menu-panel"
-        aria-label={isOpen ? "Close menu" : "Open menu"}
+        aria-label={isOpen ? dictionary.nav.closeMenu : dictionary.nav.openMenu}
         aria-expanded={isOpen}
         onClick={onToggle}
       >
@@ -1280,10 +1311,10 @@ function MobileMenu({
           <a data-mobile-menu-brand href="#top" onClick={onNavigate}>
             13:31 Studio
           </a>
-          <span data-mobile-menu-lang>EN</span>
+          <LanguageSwitcher className="mobile-language-switcher" onNavigate={onNavigate} />
         </div>
         <div data-mobile-menu-links>
-          {mobileMenuItems.map((item, index) => (
+          {dictionary.nav.mobileItems.map((item, index) => (
             <a data-mobile-menu-link href={item.href} onClick={onNavigate} key={item.href}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               {item.label}
@@ -1291,10 +1322,10 @@ function MobileMenu({
           ))}
         </div>
         <a data-mobile-menu-cta href="#brief" onClick={onNavigate}>
-          Start a project
+          {dictionary.nav.startProject}
         </a>
         <div data-mobile-menu-footer>
-          <a href="mailto:hello@1331.agency">hello@1331.agency</a>
+          <a href={`mailto:${dictionary.home.contact.email}`}>{dictionary.home.contact.email}</a>
         </div>
       </div>
     </nav>
@@ -1442,7 +1473,7 @@ function IntroOverlay({
       prepareMainContent();
 
       if ("fonts" in document) {
-        await document.fonts.load('80px "Instrument Serif"').catch(() => undefined);
+        await document.fonts.load(`80px "${getBrandFontFamily()}"`).catch(() => undefined);
       }
 
       if (disposed) {
@@ -1817,191 +1848,20 @@ function CaseCaption({
   );
 }
 
-const services = [
-  {
-    code: "(A)",
-    index: "1.1",
-    title: "Strategic basis",
-    description: [
-      "Creating a semantic and visual direction",
-      "for growth, entering a new market, or",
-      "making business changes",
-    ],
-    bullets: [
-      "Analysis of the situation and goals",
-      "Formation of positioning",
-      "Communication architecture",
-      "The basis for the brand and website",
-    ],
-  },
-  {
-    code: "(B)",
-    index: "1.2",
-    title: "Brand & Digital Identity",
-    description: [
-      "Creating a holistic visual language for",
-      "complex products and organizations",
-    ],
-    bullets: [
-      "Logo and visual system",
-      "Typography and graphics",
-      "Rules of use",
-      "Preparation for the digital environment",
-    ],
-  },
-  {
-    code: "(C)",
-    index: "1.3",
-    title: "Website & Digital Platform",
-    description: [
-      "Designing and creating websites that work",
-      "as a business tool",
-    ],
-    bullets: [
-      "Information Architecture",
-      "UX and Design",
-      "Content structure",
-      "Development and launch",
-    ],
-  },
-  {
-    code: "(D)",
-    index: "1.4",
-    title: "Redesign of existing products",
-    description: [
-      "For companies that have already grown",
-      "out of the current solution",
-    ],
-    bullets: [
-      "We will enhance the visual appeal,",
-      "match new market trends or reflect",
-      "changes in the company's strategy.",
-    ],
-    plainBullets: true,
-  },
-];
+type Service = Dictionary["home"]["services"]["items"][number];
 
-type Service = (typeof services)[number];
+type ProcessStepData = Dictionary["home"]["process"]["steps"][number];
 
-const processSteps = [
-  {
-    number: "01.",
-    label: "Immersion and analysis",
-    title: "Immersion",
-    description: [
-      "We study the business, context, and objectives to",
-      "determine the real goals of the project.",
-    ],
-    mobileDescription: [
-      "We study the business, context,",
-      "and objectives to determine",
-      "the real goals of the project.",
-    ],
-    details: [
-      "Interviews with stakeholders",
-      "Product and audience analysis",
-      "Identification of limitations and opportunities",
-    ],
-  },
-  {
-    number: "02.",
-    label: "Forming a solution",
-    title: "Strategy",
-    description: [
-      "We define how the project should work at the level",
-      "of meaning, structure and communication.",
-    ],
-    mobileDescription: [
-      "We define how the project should",
-      "work at the level of meaning,",
-      "structure and communication.",
-    ],
-    details: [
-      "Positioning",
-      "Information architecture",
-      "Basic design principles",
-      "Alignment of the direction",
-    ],
-  },
-  {
-    number: "03.",
-    label: "System design and development",
-    title: "Design",
-    description: [
-      "We are creating a visual and functional",
-      "system based on the adopted strategy.",
-    ],
-    mobileDescription: [
-      "We are creating a visual and",
-      "functional system based on",
-      "the adopted strategy.",
-    ],
-    details: [
-      "UX and visual design",
-      "Content-Structure",
-      "Iterations and approvals",
-      "Preparation for implementation",
-    ],
-  },
-  {
-    number: "04.",
-    label: "Launch and maintenance",
-    title: "Realization",
-    description: [
-      "We bring the solution to a working state",
-      "and transfer it to the client's team.",
-    ],
-    mobileDescription: [
-      "We bring the solution to a",
-      "working state and transfer it",
-      "to the client's team.",
-    ],
-    details: [
-      "Development and testing",
-      "Preparation of materials",
-      "Launch support",
-      "System transfer",
-    ],
-  },
-] as const;
+function ServiceItem({ productLabel, service }: { productLabel: string; service: Service }) {
+  const hasPlainBullets = "plainBullets" in service && service.plainBullets;
 
-const projectRoles = [
-  {
-    label: "Who runs the projects",
-    items: [
-      "Strategy, design and decisions are made within the team",
-      "There is no outsourcing of key stages",
-      "If necessary, narrow experts are involved",
-    ],
-  },
-  {
-    label: "Interaction format",
-    items: [
-      "Direct contact with those responsible for the project",
-      "Work with managers and key teams of the client",
-      "A limited number of projects at the same time",
-    ],
-  },
-] as const;
-
-const teamMembers = [
-  { name: "PAVEL", description: "CEO", image: "/PhotoTeam/Pavel.jpg", imageAlt: "Pavel", objectPosition: "center" },
-  { name: "YEGOR", description: "Art Director", image: "/PhotoTeam/YEGOR.jpg", imageAlt: "Yegor", objectPosition: "center 18%" },
-  { name: "NIKITA", description: "Creative Technologist", image: "/PhotoTeam/NIKITA.jpg", imageAlt: "Nikita", objectPosition: "center" },
-  { name: "ROMAN", description: "Brand Identity Designer", image: "/PhotoTeam/Roman.jpg", imageAlt: "Roman", objectPosition: "center top" },
-  { name: "EVGENIY", description: "Full-Stack Developer", image: "/PhotoTeam/Evgeny1.png", imageAlt: "Evgeniy", objectPosition: "center" },
-] as const;
-
-type ProcessStepData = (typeof processSteps)[number];
-
-function ServiceItem({ service }: { service: Service }) {
   return (
     <article data-motion-service-row>
       <div className="grid grid-cols-12 items-end gap-x-8">
         <h3
           data-motion-service-title
-          className={`col-span-12 -mb-[-12px] font-serif text-[96px] leading-[60px] tracking-[-0.03em] italic text-[#141714] lg:col-span-6 ${
-            service.title === "Redesign of existing products" ? "whitespace-nowrap" : ""
+          className={`col-span-12 -mb-[-12px] whitespace-pre-line font-serif text-[96px] leading-[60px] tracking-[-0.03em] italic text-[#141714] ${
+            hasPlainBullets ? "lg:col-span-8" : "lg:col-span-6"
           }`}
         >
           {service.title}
@@ -2015,7 +1875,7 @@ function ServiceItem({ service }: { service: Service }) {
 
       <div data-motion-service-body className="mt-4 grid grid-cols-12 gap-x-8 font-sans text-[20px] leading-[24px] tracking-[0em] text-[#141714]">
         <p className="col-span-2 font-sans text-[20px] font-normal leading-[24px] tracking-[0em] text-[#141714]">
-          Product
+          {productLabel}
         </p>
         <p className="col-span-1 font-bold lg:col-start-4">{service.code}</p>
         <p className="service-description col-span-3 w-[22rem] max-w-full font-bold uppercase lg:col-start-5 lg:col-end-8">
@@ -2025,7 +1885,7 @@ function ServiceItem({ service }: { service: Service }) {
             </span>
           ))}
         </p>
-        {service.plainBullets ? (
+        {hasPlainBullets ? (
           <p className="col-span-12 max-w-[32rem] lg:col-start-9 lg:col-end-13">
             {service.bullets.map((line) => (
               <span className="block whitespace-nowrap" key={line}>
@@ -2051,10 +1911,12 @@ function ServiceItem({ service }: { service: Service }) {
 }
 
 function ProcessStep({
+  detailsLabel,
   step,
   alignRight,
   compactTop,
 }: {
+  detailsLabel: string;
   step: ProcessStepData;
   alignRight: boolean;
   compactTop?: boolean;
@@ -2094,14 +1956,11 @@ function ProcessStep({
         </p>
         <div className="mt-8 grid grid-cols-[auto_1fr] gap-x-10">
           <p className="font-sans text-[20px] font-normal leading-[24px] tracking-[0em] text-[#141714]">
-            Details
+            {detailsLabel}
           </p>
-          <ul className="font-sans text-[clamp(1.2rem,1.15vw,1.45rem)] leading-[1.25] tracking-[-0.03em]">
+          <ul data-process-details-list className="font-sans text-[clamp(1.2rem,1.15vw,1.45rem)] leading-[1.25] tracking-[-0.03em]">
             {step.details.map((item) => (
-              <li key={item} className="flex gap-4">
-                <span aria-hidden="true" className="translate-y-[3px] text-[28px] leading-[18px]">
-                  &middot;
-                </span>
+              <li key={item}>
                 <span>{item}</span>
               </li>
             ))}
@@ -2116,11 +1975,13 @@ function FormLineField({
   label,
   name,
   onChange,
+  type,
   value,
 }: {
   label: string;
   name: keyof ContactFormFields;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  type: "email" | "tel" | "text";
   value: string;
 }) {
   return (
@@ -2129,7 +1990,7 @@ function FormLineField({
         {label}
       </span>
       <input
-        type={label === "E-mail" ? "email" : label === "Phone" ? "tel" : "text"}
+        type={type}
         name={name}
         onChange={onChange}
         value={value}

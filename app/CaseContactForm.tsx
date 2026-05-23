@@ -3,24 +3,10 @@
 import { type ChangeEvent, type FormEvent, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import type { Dictionary } from "../dictionaries";
 import FormChoiceRow from "./FormChoiceRow";
 
 gsap.registerPlugin(ScrollTrigger);
-
-const caseContactServiceOptions = [
-  "Strategic basis",
-  "Brand & Digital Identity",
-  "Website & Digital Platform",
-  "Redesign of existing products",
-] as const;
-const caseContactBudgetOptions = [
-  "Less than $20k",
-  "$20-$40k",
-  "$40-$60k",
-  "$60-$80k",
-  "$80-$100k",
-  "To infinity and beyond",
-] as const;
 
 type CaseContactFields = {
   company: string;
@@ -36,11 +22,13 @@ function CaseFormLineField({
   label,
   name,
   onChange,
+  type,
   value,
 }: {
   label: string;
   name: keyof CaseContactFields;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  type: "email" | "tel" | "text";
   value: string;
 }) {
   return (
@@ -51,14 +39,14 @@ function CaseFormLineField({
         className="motion-field"
         name={name}
         onChange={onChange}
-        type={label === "E-mail" ? "email" : label === "Phone" ? "tel" : "text"}
+        type={type}
         value={value}
       />
     </label>
   );
 }
 
-export default function CaseContactForm() {
+export default function CaseContactForm({ dictionary }: { dictionary: Dictionary }) {
   const [expanded, setExpanded] = useState(false);
   const [fields, setFields] = useState<CaseContactFields>({
     company: "",
@@ -74,6 +62,8 @@ export default function CaseContactForm() {
   const buttonTweenRef = useRef<gsap.core.Tween | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const brief = dictionary.home.brief;
+  const contact = dictionary.caseDetail.contactForm;
 
   useLayoutEffect(() => {
     return () => {
@@ -224,25 +214,24 @@ export default function CaseContactForm() {
       const result = await response.json().catch(() => null) as { error?: string } | null;
 
       if (!response.ok) {
-        throw new Error(result?.error ?? "Could not send the request. Please try again.");
+        throw new Error(result?.error ?? brief.error);
       }
 
       resetForm();
       setStatus("success");
-      setStatusMessage("Request sent. We will contact you soon.");
+      setStatusMessage(brief.success);
     } catch (error) {
       setStatus("error");
-      setStatusMessage(error instanceof Error ? error.message : "Could not send the request. Please try again.");
+      setStatusMessage(error instanceof Error ? error.message : brief.error);
     }
   };
 
   return (
     <section data-case-contact data-expanded={expanded}>
       <div data-case-contact-intro>
-        <h2>Tell us about the task</h2>
+        <h2>{contact.introTitle}</h2>
         <p>
-          Briefly describe the project or context. We will contact you and
-          suggest further steps.
+          {contact.introText}
         </p>
         <button
           ref={buttonRef}
@@ -252,65 +241,63 @@ export default function CaseContactForm() {
           aria-expanded={expanded}
           aria-controls="case-contact-form"
         >
-          Discuss project
+          {contact.button}
         </button>
       </div>
 
       {expanded ? (
         <form id="case-contact-form" data-case-contact-form ref={formRef} onSubmit={handleSubmit}>
           <FormChoiceRow
-            title="Services"
+            title={brief.servicesTitle}
             name="services"
             onSelectedChange={(selected) => {
               clearFeedback();
               setServices(selected);
             }}
-            options={[...caseContactServiceOptions]}
+            options={brief.serviceOptions}
             selectedOptions={services}
             serif
           />
 
           <FormChoiceRow
-            title="Budget"
+            title={brief.budgetTitle}
             multiple={false}
             name="budget"
             onSelectedChange={(selected) => {
               clearFeedback();
               setBudget(selected);
             }}
-            options={[...caseContactBudgetOptions]}
+            options={brief.budgetOptions}
             selectedOptions={budget}
             serif
           />
 
           <div data-motion-form-item>
-            <p>Task</p>
+            <p>{brief.taskTitle}</p>
             <textarea
               className="motion-field"
-              aria-label="Task"
+              aria-label={brief.taskTitle}
               name="task"
               onChange={handleFieldChange}
-              placeholder="Briefly describe the project"
+              placeholder={contact.taskPlaceholder}
               rows={3}
               value={fields.task}
             />
           </div>
 
           <div data-motion-form-item>
-            <p>Contacts</p>
+            <p>{brief.contactsTitle}</p>
             <div data-case-contact-fields>
-              <CaseFormLineField label="Name" name="name" onChange={handleFieldChange} value={fields.name} />
-              <CaseFormLineField label="Company" name="company" onChange={handleFieldChange} value={fields.company} />
-              <CaseFormLineField label="E-mail" name="email" onChange={handleFieldChange} value={fields.email} />
-              <CaseFormLineField label="Phone" name="phone" onChange={handleFieldChange} value={fields.phone} />
+              <CaseFormLineField label={brief.fields.name} name="name" onChange={handleFieldChange} type="text" value={fields.name} />
+              <CaseFormLineField label={brief.fields.company} name="company" onChange={handleFieldChange} type="text" value={fields.company} />
+              <CaseFormLineField label={brief.fields.email} name="email" onChange={handleFieldChange} type="email" value={fields.email} />
+              <CaseFormLineField label={brief.fields.phone} name="phone" onChange={handleFieldChange} type="tel" value={fields.phone} />
             </div>
 
             <div data-case-contact-submit>
               <div>
                 <p>
-                  By clicking on the button, I consent to the processing of
-                  personal data and confirm that I have read the terms and
-                  conditions.
+                  {contact.consent}
                 </p>
                 {statusMessage ? (
                   <p
@@ -323,7 +310,7 @@ export default function CaseContactForm() {
                 ) : null}
               </div>
               <button className="motion-button" disabled={status === "loading"} type="submit">
-                {status === "loading" ? "Sending" : "Send"}
+                {status === "loading" ? brief.sending : brief.send}
               </button>
             </div>
           </div>

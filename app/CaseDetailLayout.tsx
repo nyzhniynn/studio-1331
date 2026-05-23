@@ -3,6 +3,7 @@ import CaseContactForm from "./CaseContactForm";
 import CaseProjectNavLink from "./CaseProjectNavLink";
 import CaseVisualGallery from "./CaseVisualGallery";
 import type { CaseStudy } from "./caseData";
+import type { Dictionary } from "../dictionaries";
 
 type CaseNarrative = {
   overview: string;
@@ -14,6 +15,7 @@ type CaseNarrative = {
 type CaseDetailLayoutProps = {
   backSlot: ReactNode;
   caseStudy: CaseStudy;
+  dictionary: Dictionary;
   nextCase: CaseStudy;
   previousCase: CaseStudy;
 };
@@ -25,22 +27,22 @@ export function formatDisplayTitle(title: string) {
     .join(" ");
 }
 
-export function buildCaseNarrative(caseStudy: CaseStudy): CaseNarrative {
+export function buildCaseNarrative(caseStudy: CaseStudy, dictionary: Dictionary): CaseNarrative {
+  const narrative = dictionary.caseDetail.narrative;
+
   return {
     overview: caseStudy.summary,
     challenge: [
       caseStudy.challenge,
-      "The task was to keep the communication calm and precise, while giving the project enough visual scale to feel mature and memorable.",
-      "The page had to work for people who scan quickly: stakeholders, partners, and teams who need the main idea without fighting the interface.",
+      ...narrative.challengeExtra,
     ],
     solution: [
       caseStudy.solution,
-      "We used a restrained typographic system, strict spacing, and large visual blocks so the case reads like a designed document rather than a template page.",
-      "The visual rhythm is intentionally quiet: fewer effects, more structure, clear image sequencing, and a consistent editorial grid.",
+      ...narrative.solutionExtra,
     ],
     result: [
       caseStudy.result,
-      "The final presentation gives the project a clearer digital image and makes the work easier to evaluate through structure, hierarchy, and visual evidence.",
+      narrative.resultExtra,
     ],
   };
 }
@@ -48,12 +50,14 @@ export function buildCaseNarrative(caseStudy: CaseStudy): CaseNarrative {
 export default function CaseDetailLayout({
   backSlot,
   caseStudy,
+  dictionary,
   nextCase,
   previousCase,
 }: CaseDetailLayoutProps) {
   const displayTitle = formatDisplayTitle(caseStudy.title);
-  const narrative = buildCaseNarrative(caseStudy);
+  const narrative = buildCaseNarrative(caseStudy, dictionary);
   const titleTone = displayTitle.length > 18 ? "wide" : "regular";
+  const labels = dictionary.caseDetail;
 
   return (
     <main data-case-detail className="min-h-screen bg-[#f4f4ef] p-3 pb-8 text-[#141714] sm:p-5">
@@ -65,11 +69,11 @@ export default function CaseDetailLayout({
 
       <section data-case-detail-sheet>
         <div data-case-detail-left-rail>
-          <CaseProfileBlock caseStudy={caseStudy} />
-          <CaseCopyBlock label="About project" lead={narrative.overview} />
-          <CaseCopyBlock label="Task" paragraphs={narrative.challenge} />
-          <CaseCopyBlock label="Process" paragraphs={narrative.solution} />
-          <CaseCopyBlock label="Result" paragraphs={narrative.result} />
+          <CaseProfileBlock caseStudy={caseStudy} label={labels.workProfile} />
+          <CaseCopyBlock label={labels.aboutProject} lead={narrative.overview} />
+          <CaseCopyBlock label={labels.task} paragraphs={narrative.challenge} />
+          <CaseCopyBlock label={labels.process} paragraphs={narrative.solution} />
+          <CaseCopyBlock label={labels.result} paragraphs={narrative.result} />
         </div>
 
         <div data-case-detail-divider aria-hidden="true" />
@@ -77,23 +81,23 @@ export default function CaseDetailLayout({
         <aside data-case-detail-visual-rail>
           <div data-case-detail-right-note>
             {backSlot}
-            <p>{caseStudy.category} / Full case</p>
+            <p>{caseStudy.category} / {labels.fullCase}</p>
           </div>
 
-          <VisualStack caseStudy={caseStudy} />
+          <VisualStack caseStudy={caseStudy} dictionary={dictionary} />
         </aside>
       </section>
 
       <CaseQuietFooter nextCase={nextCase} previousCase={previousCase} />
-      <CaseContactForm />
+      <CaseContactForm dictionary={dictionary} />
     </main>
   );
 }
 
-function CaseProfileBlock({ caseStudy }: { caseStudy: CaseStudy }) {
+function CaseProfileBlock({ caseStudy, label }: { caseStudy: CaseStudy; label: string }) {
   return (
     <section data-case-detail-copy-row data-row="profile">
-      <p data-case-detail-copy-label>Work profile</p>
+      <p data-case-detail-copy-label>{label}</p>
       <div data-case-detail-copy-content>
         <p data-case-detail-profile-services>{caseStudy.services.join(", ")}</p>
         <p data-case-detail-profile-year>{caseStudy.year}</p>
@@ -125,14 +129,14 @@ function CaseCopyBlock({
   );
 }
 
-function VisualStack({ caseStudy }: { caseStudy: CaseStudy }) {
+function VisualStack({ caseStudy, dictionary }: { caseStudy: CaseStudy; dictionary: Dictionary }) {
   const caseVisuals = caseStudy.slides ?? [];
 
   if (!caseVisuals.length) {
     return null;
   }
 
-  return <CaseVisualGallery images={caseVisuals} title={caseStudy.title} />;
+  return <CaseVisualGallery dictionary={dictionary} images={caseVisuals} title={caseStudy.title} />;
 }
 
 function CaseQuietFooter({

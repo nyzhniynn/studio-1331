@@ -1,8 +1,11 @@
 "use client";
 
 import type { MouseEvent } from "react";
+import { usePathname } from "next/navigation";
+import { getDictionary } from "../dictionaries";
 import type { CaseStudy } from "./caseData";
 import { useCaseTransition } from "./CaseTransitionProvider";
+import { getCasePath, getLocaleFromPathname } from "./i18n";
 
 type CaseProjectNavLinkProps = {
   caseStudy: CaseStudy;
@@ -15,8 +18,13 @@ export default function CaseProjectNavLink({
   direction,
   displayTitle,
 }: CaseProjectNavLinkProps) {
+  const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
+  const dictionary = getDictionary(locale);
   const { prefetchCase, switchCase } = useCaseTransition();
-  const label = direction === "previous" ? "Previous project" : "Next project";
+  const label = direction === "previous"
+    ? dictionary.caseDetail.previousProject
+    : dictionary.caseDetail.nextProject;
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     switchCase(event, caseStudy);
@@ -27,7 +35,7 @@ export default function CaseProjectNavLink({
       aria-label={`${label}: ${displayTitle}`}
       data-case-detail-project-nav
       data-direction={direction}
-      href={`/cases/${caseStudy.slug}`}
+      href={getCasePath(caseStudy.slug, locale)}
       onClick={handleClick}
       onPointerEnter={() => prefetchCase(caseStudy)}
     >

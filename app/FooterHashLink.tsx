@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { MouseEvent, ReactNode } from "react";
 import { useCaseTransition } from "./CaseTransitionProvider";
+import { getHomePath, getLocaleFromPathname, getLocalizedHashHref } from "./i18n";
 
 type FooterHashLinkProps = {
   "aria-label"?: string;
@@ -31,13 +32,16 @@ export default function FooterHashLink({
 }: FooterHashLinkProps) {
   const pathname = usePathname();
   const { navigateHomeAnchor } = useCaseTransition();
+  const locale = getLocaleFromPathname(pathname);
+  const homePath = getHomePath(locale);
+  const localizedHref = getLocalizedHashHref(href, locale);
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (shouldLetBrowserHandle(event)) {
       return;
     }
 
-    if (pathname !== "/") {
+    if (pathname !== homePath) {
       event.preventDefault();
       navigateHomeAnchor(href);
       return;
@@ -63,7 +67,7 @@ export default function FooterHashLink({
   };
 
   return (
-    <Link className={className} href={href} onClick={handleClick} {...props}>
+    <Link className={className} href={localizedHref} onClick={handleClick} {...props}>
       {children}
     </Link>
   );
