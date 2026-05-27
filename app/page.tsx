@@ -347,6 +347,13 @@ function MainPageContent({
   const hasMoreCases = homeCaseShowMoreEnabled && visibleCaseCount < localizedCaseStudies.length;
   const home = dictionary.home;
   const brief = home.brief;
+  const approachLabelClassName = locale === "ru"
+    ? "col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-normal uppercase leading-none tracking-[-0.035em] md:translate-y-[0.35rem] lg:col-span-3"
+    : "col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-normal uppercase leading-none tracking-[-0.035em] md:translate-y-[1.65rem] lg:col-span-3";
+  const approachMobileTitleWeight = locale === "ru" ? "font-bold" : "font-normal";
+  const approachTrustClassName = locale === "ru"
+    ? "col-span-12 max-w-[35rem] font-sans text-[16px] leading-[1.35] tracking-[-0.035em] lg:col-start-3 lg:col-end-6"
+    : "col-span-12 max-w-[35rem] font-sans text-[clamp(1.25rem,1.25vw,1.55rem)] leading-[1.25] tracking-[-0.035em] lg:col-start-3 lg:col-end-6";
   const primaryRoleLabelLines = home.team.primaryRoleLabelLines;
   const secondaryRoleLabelLines = home.team.secondaryRoleLabelLines;
 
@@ -793,18 +800,18 @@ function MainPageContent({
 
       <section id="approach" data-motion-section data-motion-stack className="relative -mt-[calc(120vh-2.75rem)] bg-[#f4f4ef] px-2 pt-[clamp(8rem,12vh,9rem)] pb-0 text-[#1E1E1E] sm:-mt-[calc(120vh-2.5rem)]">
         <div className="mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8">
-          <p className="col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-extrabold uppercase leading-none tracking-[-0.035em] lg:col-span-3">
+          <p data-approach-label data-approach-label-locale={locale} className={approachLabelClassName}>
             {home.approach.label}
           </p>
 
-          <h2 className="who-help-mobile-title col-span-12 mt-10 font-serif text-[64px] leading-[70px] tracking-[-0.025em] text-[#141714] md:hidden">
+          <h2 className={`who-help-mobile-title col-span-12 mt-10 font-serif text-[64px] ${approachMobileTitleWeight} leading-[70px] tracking-[-0.025em] text-[#141714] md:hidden`}>
             {home.approach.mobileTitleLines.map((line) => (
               <span className="block" key={line}>{line}</span>
             ))}
           </h2>
 
           {locale === "ru" ? (
-            <h2 className="hidden col-span-12 mt-10 max-w-none font-serif text-[clamp(3rem,4.1vw,4.1rem)] font-normal leading-[0.93] tracking-[-0.025em] text-[#141714] md:block lg:col-start-3 lg:col-end-13 lg:mt-0" data-approach-title>
+            <h2 className="hidden col-span-12 mt-10 max-w-none font-serif text-[48px] font-bold leading-[1.05] tracking-[-0.025em] text-[#141714] md:block lg:col-start-3 lg:col-end-13 lg:mt-0" data-approach-title>
               {home.approach.desktopTitleLines.map((line, index) => (
                 <span className={`block whitespace-nowrap ${index === 0 ? "pl-[clamp(12rem,17vw,19.5rem)]" : ""}`} key={line}>
                   {line}
@@ -812,7 +819,7 @@ function MainPageContent({
               ))}
             </h2>
           ) : (
-            <h2 className="hidden col-span-12 mt-10 max-w-[1420px] font-serif text-[64px] leading-[70px] tracking-[-0.025em] text-[#141714] md:block lg:col-start-3 lg:col-end-12 lg:mt-0">
+            <h2 className="hidden col-span-12 mt-10 max-w-[1420px] font-serif text-[64px] font-normal leading-[70px] tracking-[-0.025em] text-[#141714] md:block lg:col-start-3 lg:col-end-12 lg:mt-0">
               {home.approach.desktopTitleLines.map((line, index) => (
                 <span className={`block whitespace-nowrap ${index === 0 ? "pl-[330px]" : ""}`} key={line}>
                   {line}
@@ -822,7 +829,7 @@ function MainPageContent({
           )}
 
           <div className="col-span-12 mt-[60px] grid grid-cols-12 gap-x-8 gap-y-14">
-            <p className="col-span-12 max-w-[35rem] font-sans text-[clamp(1.25rem,1.25vw,1.55rem)] leading-[1.25] tracking-[-0.035em] lg:col-start-3 lg:col-end-6">
+            <p data-approach-trust className={approachTrustClassName}>
               {home.approach.trustMobileLines.map((line) => (
                 <span className="block md:hidden" key={line}>{line}</span>
               ))}
@@ -831,7 +838,7 @@ function MainPageContent({
               ))}
             </p>
 
-            <p className="col-span-12 w-full max-w-full font-sans text-[clamp(1.25rem,1.25vw,1.55rem)] leading-[1.25] tracking-[-0.035em] indent-[11rem] lg:col-start-7 lg:col-end-13">
+            <p data-approach-body className="col-span-12 w-full max-w-full font-sans text-[clamp(1.25rem,1.25vw,1.55rem)] leading-[1.25] tracking-[-0.035em] indent-[11rem] lg:col-start-7 lg:col-end-13">
               {home.approach.body}
             </p>
           </div>
@@ -953,11 +960,11 @@ function MainPageContent({
 
       <section id="process" data-motion-section data-motion-stack data-motion-preset="process" className="bg-[#f4f4ef] px-2 pt-[clamp(5rem,8vw,8rem)] pb-0 text-[#1E1E1E]">
         <div className="mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8">
-          <p data-motion="reveal" className="col-span-12 font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-extrabold uppercase leading-none tracking-[-0.035em] lg:col-span-3">
+          <p data-motion="reveal" className="col-span-12 font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-normal uppercase leading-none tracking-[-0.035em] lg:col-span-3">
             {home.process.label}
           </p>
 
-          <h2 data-motion="reveal" className="col-span-12 mt-8 max-w-[52rem] font-serif text-[clamp(2.75rem,2.55vw,3.4rem)] leading-[1.04] tracking-[-0.045em] lg:col-start-5 lg:col-end-10 lg:mt-0">
+          <h2 data-motion="reveal" data-process-headline className="col-span-12 mt-8 max-w-[52rem] font-serif text-[clamp(2.75rem,2.55vw,3.4rem)] leading-[1.04] tracking-[-0.045em] lg:col-start-5 lg:col-end-10 lg:mt-0">
             {(home.process.mobileHeadlineLines ?? home.process.headlineLines).map((line) => (
               <span className="block md:hidden" key={`mobile-${line}`}>
                 {line}
@@ -986,7 +993,7 @@ function MainPageContent({
 
       <section id="team" data-motion-section data-motion-stack data-motion-preset="team" className="bg-[#f4f4ef] px-2 pt-[220px] pb-[clamp(6rem,9vw,9rem)] text-[#1E1E1E]">
         <div className="relative mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8">
-          <p data-motion="reveal" className="col-span-12 font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-extrabold uppercase leading-[1.05] tracking-[-0.035em] lg:absolute lg:left-0 lg:top-0 lg:w-[22rem]">
+          <p data-motion="reveal" className="col-span-12 font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-normal uppercase leading-[1.05] tracking-[-0.035em] lg:absolute lg:left-0 lg:top-0 lg:w-[22rem]">
             {home.team.eyebrowLines.map((line) => (
               <span className="block" key={line}>{line}</span>
             ))}
@@ -1108,7 +1115,6 @@ function MainPageContent({
               }}
               options={brief.serviceOptions}
               selectedOptions={contactServices}
-              serif
             />
 
             <FormChoiceRow
@@ -1121,7 +1127,6 @@ function MainPageContent({
               }}
               options={brief.budgetOptions}
               selectedOptions={contactBudget}
-              serif
             />
 
             <div
@@ -1222,7 +1227,7 @@ function MainPageContent({
       </section>
 
       <section id="contact" data-motion-section data-motion-preset="contact" className="bg-[#f4f4ef] px-0 pt-[150px] pb-[60px] text-[#1E1E1E]">
-        <div className="mx-auto grid max-w-[1824px] grid-cols-12 gap-x-8 rounded-[24px] bg-[#FFFB12] px-4 pt-[110px] pb-[70px] sm:px-6 lg:px-3">
+        <div className="mx-auto mt-[40px] grid max-w-[1824px] grid-cols-12 gap-x-8 rounded-[24px] bg-[#FFFB12] px-4 pt-[70px] pb-[70px] sm:px-6 lg:px-3">
           <p className="col-span-12 font-sans text-[20px] font-bold uppercase leading-[24px] tracking-[0em] text-[#141714] lg:col-span-2 lg:pt-[12px]">
             {home.contact.labelLines.map((line) => (
               <span className="block" key={line}>{line}</span>
@@ -1860,7 +1865,7 @@ function ServiceItem({ productLabel, service }: { productLabel: string; service:
       <div className="grid grid-cols-12 items-end gap-x-8">
         <h3
           data-motion-service-title
-          className={`col-span-12 -mb-[-12px] whitespace-pre-line font-serif text-[96px] leading-[60px] tracking-[-0.03em] italic text-[#141714] ${
+          className={`col-span-12 -mb-[-12px] whitespace-pre-line font-serif text-[96px] leading-[0.9] tracking-[-0.03em] italic text-[#141714] ${
             hasPlainBullets ? "lg:col-span-8" : "lg:col-span-6"
           }`}
         >
@@ -1894,10 +1899,10 @@ function ServiceItem({ productLabel, service }: { productLabel: string; service:
             ))}
           </p>
         ) : (
-          <ul className="col-span-12 lg:col-start-9 lg:col-end-13">
+          <ul className="col-span-12 list-none lg:col-start-9 lg:col-end-13">
             {service.bullets.map((bullet) => (
               <li key={bullet} className="flex gap-4">
-                <span aria-hidden="true" className="translate-y-[3px] text-[28px] leading-[18px]">
+                <span aria-hidden="true" data-service-bullet-marker className="-translate-y-[1px] text-[28px] leading-[18px]">
                   &middot;
                 </span>
                 <span>{bullet}</span>
@@ -1986,15 +1991,15 @@ function FormLineField({
 }) {
   return (
     <label className="block">
-      <span className="block font-serif text-[clamp(1.35rem,1.2vw,1.7rem)] leading-none tracking-[-0.04em] text-[#9A9A9A]">
-        {label}
-      </span>
       <input
+        aria-label={label}
+        data-form-line-input
         type={type}
         name={name}
         onChange={onChange}
+        placeholder={label}
         value={value}
-        className="motion-field mt-3 block h-[26px] w-full border-0 border-b border-[#BFBFB8] bg-transparent px-0 font-sans text-[20px] leading-[24px] tracking-[0em] text-[#141714] outline-none"
+        className="motion-field block h-[44px] w-full border-0 border-b border-[#BFBFB8] bg-transparent px-0 pb-[10px] font-sans text-[20px] leading-[24px] tracking-[0em] text-[#141714] outline-none"
       />
     </label>
   );

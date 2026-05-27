@@ -56,9 +56,6 @@ export default function SiteFooter() {
             <a className="site-footer__text-link" href={`mailto:${dictionary.footer.email}`}>
               {dictionary.footer.email}
             </a>
-            <FooterHashLink className="site-footer__text-link" href="/#contact">
-              {dictionary.footer.onlineStudio}
-            </FooterHashLink>
             <FooterHashLink className="site-footer__text-link" href="/#brief">
               {dictionary.footer.startProject}
             </FooterHashLink>

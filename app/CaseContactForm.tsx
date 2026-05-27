@@ -1,12 +1,22 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useLayoutEffect, useRef, useState } from "react";
+import { type ChangeEvent, type DragEvent, type FormEvent, useCallback, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { Dictionary } from "../dictionaries";
 import FormChoiceRow from "./FormChoiceRow";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const contactFileMaxSize = 4 * 1024 * 1024;
+const contactFileAccept = ".pdf,.png,.jpg,.jpeg,.zip,.doc,.docx";
+const contactAllowedFileExtensions = new Set(["pdf", "png", "jpg", "jpeg", "zip", "doc", "docx"]);
+
+function getFileExtension(fileName: string) {
+  const extension = fileName.split(".").pop();
+
+  return extension ? extension.toLowerCase() : "";
+}
 
 type CaseContactFields = {
   company: string;
@@ -33,12 +43,13 @@ function CaseFormLineField({
 }) {
   return (
     <label data-case-contact-field>
-      <span>{label}</span>
       <input
         aria-label={label}
+        data-form-line-input
         className="motion-field"
         name={name}
         onChange={onChange}
+        placeholder={label}
         type={type}
         value={value}
       />
@@ -59,8 +70,10 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
   const [services, setServices] = useState<string[]>([]);
   const [status, setStatus] = useState<CaseContactStatus>("idle");
   const [statusMessage, setStatusMessage] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const buttonTweenRef = useRef<gsap.core.Tween | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const brief = dictionary.home.brief;
   const contact = dictionary.caseDetail.contactForm;
@@ -171,6 +184,7 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
   };
 
   const resetForm = () => {
+    setAttachedFiles([]);
     setBudget([]);
     setFields({
       company: "",
@@ -180,7 +194,81 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
       task: "",
     });
     setServices([]);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
+
+  const addFiles = useCallback((fileList: FileList | File[]) => {
+    const incomingFiles = Array.from(fileList);
+
+    if (!incomingFiles.length) {
+      return;
+    }
+
+    const invalidFile = incomingFiles.find((file) => (
+      file.size > contactFileMaxSize ||
+      !contactAllowedFileExtensions.has(getFileExtension(file.name))
+    ));
+
+    if (invalidFile) {
+      setStatus("error");
+      setStatusMessage(brief.fileTooLarge.replace("{fileName}", invalidFile.name));
+      return;
+    }
+
+    const currentSize = attachedFiles.reduce((sum, file) => sum + file.size, 0);
+    const incomingSize = incomingFiles.reduce((sum, file) => sum + file.size, 0);
+
+    if (currentSize + incomingSize > contactFileMaxSize) {
+      setStatus("error");
+      setStatusMessage(brief.totalFilesTooLarge);
+      return;
+    }
+
+    clearFeedback();
+    setAttachedFiles((current) => {
+      const existingKeys = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+      const nextFiles = [...current];
+
+      incomingFiles.forEach((file) => {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+          nextFiles.push(file);
+        }
+      });
+
+      return nextFiles;
+    });
+  }, [attachedFiles, brief.fileTooLarge, brief.totalFilesTooLarge]);
+
+  const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    if (event.currentTarget.files) {
+      addFiles(event.currentTarget.files);
+    }
+
+    event.currentTarget.value = "";
+  }, [addFiles]);
+
+  const handleFileDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    if (event.dataTransfer.files.length) {
+      addFiles(event.dataTransfer.files);
+    }
+  }, [addFiles]);
+
+  const handleFileDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  }, []);
+
+  const removeFile = useCallback((indexToRemove: number) => {
+    clearFeedback();
+    setAttachedFiles((current) => current.filter((_, index) => index !== indexToRemove));
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -205,6 +293,9 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
     formData.append("company", fields.company);
     formData.append("email", fields.email);
     formData.append("phone", fields.phone);
+    attachedFiles.forEach((file) => {
+      formData.append("files", file, file.name);
+    });
 
     try {
       const response = await fetch("/api/contact", {
@@ -256,7 +347,6 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
             }}
             options={brief.serviceOptions}
             selectedOptions={services}
-            serif
           />
 
           <FormChoiceRow
@@ -269,20 +359,51 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
             }}
             options={brief.budgetOptions}
             selectedOptions={budget}
-            serif
           />
 
-          <div data-motion-form-item>
+          <div data-motion-form-item onDragOver={handleFileDragOver} onDrop={handleFileDrop}>
             <p>{brief.taskTitle}</p>
             <textarea
               className="motion-field"
               aria-label={brief.taskTitle}
               name="task"
               onChange={handleFieldChange}
-              placeholder={contact.taskPlaceholder}
-              rows={3}
+              placeholder={brief.taskPlaceholder}
+              rows={1}
               value={fields.task}
             />
+            <input
+              ref={fileInputRef}
+              accept={contactFileAccept}
+              className="hidden"
+              multiple
+              name="files"
+              onChange={handleFileChange}
+              type="file"
+            />
+            <button
+              type="button"
+              className="motion-link"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {brief.attachFile}
+            </button>
+            {attachedFiles.length ? (
+              <ul data-case-contact-file-list>
+                {attachedFiles.map((file, index) => (
+                  <li key={`${file.name}-${file.size}-${file.lastModified}`}>
+                    <span>{file.name}</span>
+                    <button
+                      aria-label={brief.removeFileAria.replace("{fileName}", file.name)}
+                      onClick={() => removeFile(index)}
+                      type="button"
+                    >
+                      {brief.removeFile}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
           <div data-motion-form-item>

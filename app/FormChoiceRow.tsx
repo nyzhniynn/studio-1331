@@ -9,7 +9,6 @@ export default function FormChoiceRow({
   title,
   options,
   selectedOptions,
-  serif,
 }: {
   multiple?: boolean;
   name?: string;
@@ -17,7 +16,6 @@ export default function FormChoiceRow({
   title: string;
   options: string[];
   selectedOptions?: string[];
-  serif?: boolean;
 }) {
   const [internalSelected, setInternalSelected] = useState<string[]>([]);
   const selected = selectedOptions ?? internalSelected;
@@ -51,11 +49,7 @@ export default function FormChoiceRow({
               type="button"
               aria-pressed={isSelected}
               onClick={() => toggleOption(option)}
-              className={`motion-chip rounded-full bg-[#EFEFEB] px-5 py-[11px] leading-none text-[#141714] ${
-                serif
-                  ? "font-serif text-[20px] tracking-[-0.02em]"
-                  : "font-sans text-[20px] tracking-[0em]"
-              }`}
+              className="motion-chip rounded-full bg-[#EFEFEB] px-5 py-[11px] font-sans text-[18px] leading-none tracking-[0em] text-[#141714]"
             >
               {option}
             </button>
