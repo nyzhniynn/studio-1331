@@ -2984,6 +2984,11 @@ body::-webkit-scrollbar-button {
     line-height: 1.1 !important;
   }
 
+  html[lang="ru"] [data-motion-preset="contact"] [data-contact-copy] {
+    width: calc(100% - 0.75rem) !important;
+    max-width: calc(100% - 0.75rem) !important;
+  }
+
   [data-motion-preset="contact"] > div > div:last-child {
     margin-top: 4rem !important;
     text-align: left !important;
