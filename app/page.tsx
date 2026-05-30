@@ -346,6 +346,7 @@ function MainPageContent({
   const visibleCases = localizedCaseStudies.slice(0, visibleCaseLimit);
   const hasMoreCases = homeCaseShowMoreEnabled && visibleCaseCount < localizedCaseStudies.length;
   const home = dictionary.home;
+  const heroMobileTitleLines = (home.hero as typeof home.hero & { mobileTitleLines?: string[] }).mobileTitleLines;
   const brief = home.brief;
   const approachLabelClassName = locale === "ru"
     ? "col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-normal uppercase leading-none tracking-[-0.035em] md:translate-y-[0.35rem] lg:col-span-3"
@@ -777,7 +778,12 @@ function MainPageContent({
               >
                 <h1 data-motion-hero-title className="hero-title font-serif text-[clamp(72px,15vh,136px)] leading-[90%] tracking-[-0.02em]">
                   {home.hero.titleLines.map((line, index) => (
-                    <span data-motion-hero-line className={`block ${index === 0 ? "italic" : ""}`} key={line}>
+                    <span data-motion-hero-line className={`hero-title-line-base block ${index === 0 ? "italic" : ""}`} key={line}>
+                      {line}
+                    </span>
+                  ))}
+                  {heroMobileTitleLines?.map((line) => (
+                    <span data-motion-hero-line className="hero-title-line-mobile hidden" key={`mobile-${line}`}>
                       {line}
                     </span>
                   ))}
@@ -1622,6 +1628,7 @@ function HeroFlowers() {
     "hero-bloom-c",
     "hero-bloom-d",
     "hero-bloom-e",
+    "hero-bloom-f",
   ];
 
   return (

@@ -32,8 +32,9 @@ const ru = {
     ...en.home,
     hero: {
       brand: "13:31 Studio",
-      titleLines: ["Modern websites", "for companies that have", "outgrown templates"],
-      captionLines: ["Custom design aligned with your", "strategy and scale"],
+      titleLines: ["Решаем комплексные задачи", "в оффлайн и диджитал", "среде"],
+      mobileTitleLines: ["Решаем комплексные", "задачи в оффлайн", "и диджитал среде"],
+      captionLines: ["Индивидуальный дизайн, соответствующий", "стратегии и масштабу"],
     },
     approach: {
       label: "Кому мы помогаем",

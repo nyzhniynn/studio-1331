@@ -243,15 +243,25 @@ function setHeroEntranceFinalState(scope: ParentNode) {
   }
 }
 
+function getFlowerBaseRotation(flower: HTMLElement) {
+  const rotation = Number.parseFloat(window.getComputedStyle(flower).getPropertyValue("--hero-bloom-rotation"));
+
+  return Number.isFinite(rotation) ? rotation : 0;
+}
+
 function setHeroFlowersFinalState(scope: ParentNode) {
   queryAll<HTMLElement>(scope, "[data-motion-flower]").forEach((flower, index) => {
     const morphPath = queryOne<SVGPathElement>(flower, "[data-flower-morph-path]");
     const visibleAlpha = index > 2 ? 0.68 : 0.82;
+    const baseRotation = getFlowerBaseRotation(flower);
 
     gsap.killTweensOf(flower);
     gsap.set(flower, {
       autoAlpha: visibleAlpha,
-      clearProps: "x,y,scale,rotate,transform",
+      x: 0,
+      y: 0,
+      scale: 1,
+      rotate: baseRotation,
     });
 
     if (!morphPath?.dataset.openPath) {
@@ -270,6 +280,7 @@ function animateHeroFlowers(withEntrance: boolean, scope: ParentNode) {
   queryAll<HTMLElement>(scope, "[data-motion-flower]").forEach((flower, index) => {
     const morphPath = queryOne<SVGPathElement>(flower, "[data-flower-morph-path]");
     const delay = index * 0.72;
+    const baseRotation = getFlowerBaseRotation(flower);
     const rotation = index % 2 === 0 ? 5 : -6;
     const travelY = index % 2 === 0 ? -12 : 10;
     const travelX = index % 3 === 0 ? 9 : -7;
@@ -306,11 +317,11 @@ function animateHeroFlowers(withEntrance: boolean, scope: ParentNode) {
       gsap.fromTo(flower, {
         autoAlpha: 0,
         scale: 0.94,
-        rotate: rotation,
+        rotate: baseRotation + rotation,
       }, {
         autoAlpha: visibleAlpha,
         scale: 1,
-        rotate: rotation * -0.35,
+        rotate: baseRotation + rotation * -0.35,
         duration: 1.15,
         delay,
         ease: "power3.out",
@@ -322,7 +333,7 @@ function animateHeroFlowers(withEntrance: boolean, scope: ParentNode) {
       gsap.set(flower, {
         autoAlpha: visibleAlpha,
         scale: 1,
-        rotate: rotation * -0.35,
+        rotate: baseRotation + rotation * -0.35,
       });
     }
 
@@ -347,7 +358,7 @@ function animateHeroFlowers(withEntrance: boolean, scope: ParentNode) {
       .to(flower, {
         y: travelY,
         x: travelX,
-        rotate: rotation * 0.9,
+        rotate: baseRotation + rotation * 0.9,
         scale: index % 2 === 0 ? 1.03 : 0.97,
         duration: 2.8,
         ease: "sine.inOut",

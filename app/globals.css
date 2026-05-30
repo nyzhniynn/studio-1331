@@ -871,6 +871,9 @@ body::-webkit-scrollbar-button {
 }
 
 .hero-bloom {
+  --hero-bloom-rotation: 0deg;
+  --hero-bloom-flip: 1;
+
   position: absolute;
   aspect-ratio: 622 / 594;
   opacity: 0;
@@ -923,6 +926,7 @@ body::-webkit-scrollbar-button {
 
 .hero-bloom-inner {
   aspect-ratio: 622 / 594;
+  transform: scaleX(var(--hero-bloom-flip));
   will-change: transform;
 }
 
@@ -936,12 +940,17 @@ body::-webkit-scrollbar-button {
 
 /* Individual hero flower positions. Edit these blocks to move one flower at a time. */
 .hero-bloom-a {
+  --hero-bloom-rotation: -22deg;
+
   right: clamp(-2rem, 1vw, 3rem);
   top: clamp(12rem, 24vh, 19rem);
   width: clamp(22rem, 26vw, 34rem);
 }
 
 .hero-bloom-b {
+  --hero-bloom-rotation: 34deg;
+  --hero-bloom-flip: -1;
+
   left: clamp(2rem, 5vw, 7rem);
   top: clamp(11rem, 22vh, 17rem);
   width: clamp(19rem, 22vw, 29rem);
@@ -949,6 +958,8 @@ body::-webkit-scrollbar-button {
 }
 
 .hero-bloom-c {
+  --hero-bloom-rotation: -52deg;
+
   left: clamp(27rem, 34vw, 44rem);
   top: clamp(3rem, 7vh, 6rem);
   width: clamp(10rem, 12vw, 16rem);
@@ -956,6 +967,9 @@ body::-webkit-scrollbar-button {
 }
 
 .hero-bloom-d {
+  --hero-bloom-rotation: 44deg;
+  --hero-bloom-flip: -1;
+
   left: clamp(48rem, 58vw, 76rem);
   bottom: clamp(-6rem, -3vh, -2rem);
   width: clamp(17rem, 20vw, 27rem);
@@ -963,10 +977,22 @@ body::-webkit-scrollbar-button {
 }
 
 .hero-bloom-e {
+  --hero-bloom-rotation: 68deg;
+
   right: clamp(26rem, 35vw, 50rem);
   top: clamp(4rem, 9vh, 8rem);
   width: clamp(9rem, 11vw, 15rem);
   opacity: 0.62;
+}
+
+.hero-bloom-f {
+  --hero-bloom-rotation: -40deg;
+  --hero-bloom-flip: -1;
+
+  left: clamp(8rem, 16vw, 25rem);
+  bottom: clamp(-8rem, -5vh, -3rem);
+  width: clamp(17rem, 20vw, 26rem);
+  opacity: 0.58;
 }
 
 [data-motion-flower] {
@@ -1954,6 +1980,103 @@ body::-webkit-scrollbar-button {
   overflow: visible;
 }
 
+html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
+  display: none !important;
+}
+
+@media (min-width: 1440px) {
+  html[lang="en"] [data-motion-yellow-layer] > .relative {
+    padding: 36px 40px 40px !important;
+  }
+
+  html[lang="en"] [data-motion-hero-copy] {
+    position: absolute;
+    top: calc(50% - 160px);
+    right: 0;
+    left: 0;
+    width: min(980px, calc(100% - 80px));
+    margin: 0 auto;
+    padding-bottom: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="en"] .hero-title {
+    font-size: 136px !important;
+    font-style: normal !important;
+    line-height: 0.78 !important;
+    letter-spacing: 0 !important;
+    transform: scaleX(0.82);
+    transform-origin: center top;
+  }
+
+  html[lang="en"] .hero-title [data-motion-hero-line] {
+    position: relative;
+    font-style: normal !important;
+    white-space: nowrap;
+  }
+
+  html[lang="en"] .hero-title [data-motion-hero-line]:nth-child(1) {
+    left: -32px;
+  }
+
+  html[lang="en"] .hero-title [data-motion-hero-line]:nth-child(2) {
+    left: -50px;
+  }
+
+  html[lang="en"] .hero-caption {
+    margin-top: 30px !important;
+    font-size: 22px !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="en"] .hero-caption-line {
+    display: block;
+  }
+
+  html[lang="ru"] [data-motion-yellow-layer] > .relative {
+    padding: 36px 40px 40px !important;
+  }
+
+  html[lang="ru"] [data-motion-hero-copy] {
+    position: absolute;
+    top: calc(50% - 150px);
+    right: 0;
+    left: 0;
+    width: min(1540px, calc(100% - 80px));
+    margin: 0 auto;
+    padding-bottom: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="ru"] .hero-title {
+    font-family: var(--font-source-serif) !important;
+    font-size: 126px !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    line-height: 0.85 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  html[lang="ru"] .hero-title [data-motion-hero-line] {
+    font-style: normal !important;
+    white-space: nowrap;
+  }
+
+  html[lang="ru"] .hero-caption {
+    margin-top: 32px !important;
+    font-size: 22px !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="ru"] .hero-caption-line {
+    display: block;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -2590,34 +2713,47 @@ body::-webkit-scrollbar-button {
   }
 
   .hero-bloom-a {
-    top: 23vh;
-    right: -7rem;
-    width: 18rem;
+    display: block !important;
+    top: 24vh !important;
+    right: -6.9rem !important;
+    left: auto !important;
+    width: 15.6rem !important;
   }
 
   .hero-bloom-b {
-    top: 31vh;
-    left: -5.5rem;
-    width: 16rem;
+    display: block !important;
+    top: 31vh !important;
+    left: -8.35rem !important;
+    right: auto !important;
+    width: 17.8rem !important;
   }
 
   .hero-bloom-c {
-    top: 12vh;
-    left: 48vw;
-    width: 9rem;
+    top: 8.25vh !important;
+    left: 59vw !important;
+    right: auto !important;
+    width: 8.7rem !important;
   }
 
   .hero-bloom-d {
-    right: -2rem;
-    bottom: -2.5rem;
-    left: auto;
-    width: 14rem;
+    right: -8.8rem !important;
+    bottom: -4.65rem !important;
+    left: auto !important;
+    width: 22.6rem !important;
   }
 
   .hero-bloom-e {
-    top: 10vh;
-    right: 45vw;
-    width: 8rem;
+    top: 17vh !important;
+    right: 69vw !important;
+    left: auto !important;
+    width: 4.8rem !important;
+  }
+
+  .hero-bloom-f {
+    left: -6.2rem !important;
+    bottom: 8.2vh !important;
+    right: auto !important;
+    width: 12.8rem !important;
   }
 
   [data-motion-stack]:not([data-motion-preset]) {
@@ -3715,5 +3851,238 @@ body::-webkit-scrollbar-button {
   html[lang="ru"] [data-motion-preset="contact"] > div > p {
     padding-top: 0 !important;
     transform: translateY(0) !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1439px) {
+  html[lang="en"] [data-motion-yellow-layer] > .relative {
+    padding: clamp(1.75rem, 2.5vw, 2.25rem) clamp(1.75rem, 2.75vw, 2.5rem) clamp(2rem, 2.75vw, 2.5rem) !important;
+  }
+
+  html[lang="en"] [data-motion-hero-copy] {
+    position: absolute;
+    top: calc(50% - clamp(8rem, 11.5vw, 9.75rem));
+    right: 0;
+    left: 0;
+    width: min(900px, calc(100% - clamp(3rem, 7vw, 5rem)));
+    margin: 0 auto;
+    padding-bottom: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="en"] .hero-title {
+    font-size: clamp(72px, 9.25vw, 116px) !important;
+    font-style: normal !important;
+    line-height: 0.78 !important;
+    letter-spacing: 0 !important;
+    transform: scaleX(0.82);
+    transform-origin: center top;
+  }
+
+  html[lang="en"] .hero-title [data-motion-hero-line] {
+    display: block !important;
+    font-style: normal !important;
+    white-space: nowrap;
+  }
+
+  html[lang="en"] .hero-title [data-motion-hero-line]:not(:last-child)::after,
+  html[lang="en"] .hero-caption-line:not(:last-child)::after {
+    content: none !important;
+  }
+
+  html[lang="en"] [data-motion-hero-copy] > p,
+  html[lang="en"] .hero-caption {
+    max-width: none !important;
+  }
+
+  html[lang="en"] .hero-caption {
+    margin-top: clamp(1.25rem, 2vw, 1.8rem) !important;
+    font-size: clamp(17px, 1.8vw, 22px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="en"] .hero-caption-line {
+    display: block !important;
+  }
+
+  html[lang="ru"] [data-motion-yellow-layer] > .relative {
+    padding: clamp(1.75rem, 2.5vw, 2.25rem) clamp(1.75rem, 2.75vw, 2.5rem) clamp(2rem, 2.75vw, 2.5rem) !important;
+  }
+
+  html[lang="ru"] [data-motion-hero-copy] {
+    position: absolute;
+    top: calc(50% - clamp(6.25rem, 8.4vw, 7.75rem));
+    right: 0;
+    left: 0;
+    width: min(1180px, calc(100% - clamp(2.5rem, 5vw, 4.5rem)));
+    margin: 0 auto;
+    padding-bottom: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="ru"] .hero-title {
+    font-family: var(--font-source-serif) !important;
+    font-size: clamp(50px, 6.35vw, 88px) !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    line-height: 0.85 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  html[lang="ru"] .hero-title [data-motion-hero-line] {
+    display: block !important;
+    font-style: normal !important;
+    white-space: nowrap;
+  }
+
+  html[lang="ru"] .hero-title [data-motion-hero-line]:not(:last-child)::after,
+  html[lang="ru"] .hero-caption-line:not(:last-child)::after {
+    content: none !important;
+  }
+
+  html[lang="ru"] [data-motion-hero-copy] > p,
+  html[lang="ru"] .hero-caption {
+    max-width: none !important;
+  }
+
+  html[lang="ru"] .hero-caption {
+    margin-top: clamp(1rem, 1.45vw, 1.45rem) !important;
+    font-size: clamp(13px, 1.28vw, 17px) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="ru"] .hero-caption-line {
+    display: block !important;
+  }
+}
+
+@media (max-width: 767px) {
+  html[lang="en"] [data-motion-hero-copy] {
+    position: absolute;
+    top: calc(50% - clamp(4.75rem, 21vh, 6rem));
+    right: 0;
+    left: 0;
+    width: calc(100% - 0.5rem);
+    margin: 0 auto;
+    padding-bottom: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="en"] .hero-title {
+    position: relative;
+    left: 50%;
+    width: max-content;
+    margin: 0;
+    font-size: clamp(41px, 12.25vw, 55px) !important;
+    font-style: normal !important;
+    line-height: 0.8 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+    transform: translateX(-50%) scaleX(0.82);
+    transform-origin: center top;
+  }
+
+  html[lang="en"] .hero-title [data-motion-hero-line] {
+    display: block !important;
+    font-style: normal !important;
+    white-space: nowrap !important;
+  }
+
+  html[lang="en"] .hero-title [data-motion-hero-line]:not(:last-child)::after,
+  html[lang="en"] .hero-caption-line:not(:last-child)::after {
+    content: none !important;
+  }
+
+  html[lang="en"] [data-motion-hero-copy] > p,
+  html[lang="en"] .hero-caption {
+    max-width: none !important;
+  }
+
+  html[lang="en"] .hero-caption {
+    width: fit-content;
+    max-width: 100% !important;
+    margin-top: clamp(1rem, 4.8vw, 1.45rem) !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
+    font-size: clamp(11px, 3.15vw, 15px) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="en"] .hero-caption-line {
+    display: block !important;
+  }
+
+  html[lang="ru"] [data-motion-hero-copy] {
+    position: absolute;
+    top: calc(50% - clamp(4.35rem, 19vh, 5.5rem));
+    right: 0;
+    left: 0;
+    width: calc(100% - 0.5rem);
+    margin: 0 auto;
+    padding-bottom: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="ru"] .hero-title {
+    position: relative;
+    left: 50%;
+    width: calc(100% - 1rem);
+    margin: 0;
+    font-family: var(--font-source-serif) !important;
+    font-size: clamp(30px, 8.5vw, 39px) !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    line-height: 0.86 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+    transform: translateX(-50%);
+    transform-origin: center top;
+  }
+
+  html[lang="ru"] .hero-title [data-motion-hero-line] {
+    display: block !important;
+    font-style: normal !important;
+    white-space: normal !important;
+  }
+
+  html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-base {
+    display: none !important;
+  }
+
+  html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
+    display: block !important;
+    white-space: nowrap !important;
+  }
+
+  html[lang="ru"] .hero-title [data-motion-hero-line]:not(:last-child)::after,
+  html[lang="ru"] .hero-caption-line:not(:last-child)::after {
+    content: none !important;
+  }
+
+  html[lang="ru"] [data-motion-hero-copy] > p,
+  html[lang="ru"] .hero-caption {
+    max-width: none !important;
+  }
+
+  html[lang="ru"] .hero-caption {
+    width: fit-content;
+    max-width: 100% !important;
+    margin-top: clamp(0.95rem, 4.2vw, 1.35rem) !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
+    font-size: clamp(10px, 2.9vw, 14px) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+    text-align: center;
+  }
+
+  html[lang="ru"] .hero-caption-line {
+    display: block !important;
   }
 }

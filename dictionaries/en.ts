@@ -28,8 +28,8 @@ const en = {
   home: {
     hero: {
       brand: "13:31 Studio",
-      titleLines: ["Modern websites", "for companies that have", "outgrown templates"],
-      captionLines: ["Custom design aligned with your", "strategy and scale"],
+      titleLines: ["We solve complex tasks", "in an offline and digital", "environment"],
+      captionLines: ["Custom design aligned with your strategy", "and scale"],
     },
     approach: {
       label: "Who are we helping",
