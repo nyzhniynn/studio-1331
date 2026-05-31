@@ -347,6 +347,7 @@ function MainPageContent({
   const hasMoreCases = homeCaseShowMoreEnabled && visibleCaseCount < localizedCaseStudies.length;
   const home = dictionary.home;
   const heroMobileTitleLines = (home.hero as typeof home.hero & { mobileTitleLines?: string[] }).mobileTitleLines;
+  const heroMobileCaptionLines = (home.hero as typeof home.hero & { mobileCaptionLines?: string[] }).mobileCaptionLines;
   const brief = home.brief;
   const approachLabelClassName = locale === "ru"
     ? "col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-normal uppercase leading-none tracking-[-0.035em] md:translate-y-[0.35rem] lg:col-span-3"
@@ -769,8 +770,10 @@ function MainPageContent({
 
             <div className="relative z-10 flex h-full flex-col px-8 pt-7 pb-9">
               <p data-motion-hero-brand className="hero-brand font-serif text-[64px] leading-[90%] tracking-[-0.02em]">
-                {home.hero.brand}
+                <span className="hero-brand-full">{home.hero.brand}</span>
+                <span className="hero-brand-mobile">13:31</span>
               </p>
+              <LanguageSwitcher className="hero-mobile-language-switcher" />
 
               <div
                 data-motion-hero-copy
@@ -793,7 +796,12 @@ function MainPageContent({
                   style={{ fontFamily: 'var(--font-inter-black)', fontSize: "clamp(16px, 2.7vh, 24px)" }}
                 >
                   {home.hero.captionLines.map((line) => (
-                    <span className="hero-caption-line whitespace-nowrap" key={line}>
+                    <span className="hero-caption-line hero-caption-line-base whitespace-nowrap" key={line}>
+                      {line}
+                    </span>
+                  ))}
+                  {heroMobileCaptionLines?.map((line) => (
+                    <span className="hero-caption-line hero-caption-line-mobile hidden whitespace-nowrap" key={`mobile-${line}`}>
                       {line}
                     </span>
                   ))}
@@ -1305,6 +1313,9 @@ function MobileMenu({
 }) {
   return (
     <nav data-mobile-menu data-open={isOpen} aria-label="Mobile navigation">
+      <a data-mobile-top-brand href="#top" onClick={onNavigate}>
+        13:31
+      </a>
       <button
         type="button"
         data-mobile-menu-toggle
@@ -1313,8 +1324,9 @@ function MobileMenu({
         aria-expanded={isOpen}
         onClick={onToggle}
       >
-        <span />
-        <span />
+        <span data-mobile-menu-toggle-line />
+        <span data-mobile-menu-toggle-line />
+        <span data-mobile-menu-toggle-label>Menu</span>
       </button>
       <div id="mobile-menu-panel" data-mobile-menu-panel aria-hidden={!isOpen}>
         <MobileMenuFlowers />
@@ -1322,7 +1334,6 @@ function MobileMenu({
           <a data-mobile-menu-brand href="#top" onClick={onNavigate}>
             13:31 Studio
           </a>
-          <LanguageSwitcher className="mobile-language-switcher" onNavigate={onNavigate} />
         </div>
         <div data-mobile-menu-links>
           {dictionary.nav.mobileItems.map((item, index) => (

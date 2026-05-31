@@ -29,7 +29,9 @@ const en = {
     hero: {
       brand: "13:31 Studio",
       titleLines: ["We solve complex tasks", "in an offline and digital", "environment"],
+      mobileTitleLines: ["We solve", "complex tasks", "in an offline", "and digital", "environment"],
       captionLines: ["Custom design aligned with your strategy", "and scale"],
+      mobileCaptionLines: ["Custom design aligned", "with your strategy and", "scale"],
     },
     approach: {
       label: "Who are we helping",
