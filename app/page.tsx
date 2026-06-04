@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MotionOrchestrator from "./MotionOrchestrator";
@@ -26,6 +27,7 @@ import {
 } from "./caseData";
 import { useCaseTransition } from "./CaseTransitionProvider";
 import { defaultLocale, getCasePath, type Locale } from "./i18n";
+import { getImageDimensions } from "./imageMetadata";
 import { getLocalizedPublishedCaseStudies } from "./localizedCases";
 import { getDictionary, type Dictionary } from "../dictionaries";
 
@@ -907,6 +909,10 @@ function MainPageContent({
           >
             {visibleCases.map((caseStudy, index) => {
               const layout = getHomeCaseLayout(index);
+              const imageDimensions = getImageDimensions(caseStudy.image);
+              const imageSizes = index === 1
+                ? "(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1439px) 58vw, 58vw"
+                : "(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1439px) 33vw, 33vw";
 
               return (
                 <article
@@ -930,11 +936,15 @@ function MainPageContent({
                       onPointerLeave={handleCaseMediaPointerLeave}
                       onPointerMove={handleCaseMediaPointerMove}
                     >
-                      <img
+                      <Image
                         className="case-media-image"
-                        src={caseStudy.image}
                         alt={caseStudy.imageAlt}
+                        height={imageDimensions.height}
+                        loading="lazy"
+                        sizes={imageSizes}
+                        src={caseStudy.image}
                         style={caseStudy.homeImagePosition ? { objectPosition: caseStudy.homeImagePosition } : undefined}
+                        width={imageDimensions.width}
                       />
                     </div>
                     <CaseCaption
@@ -1087,19 +1097,27 @@ function MainPageContent({
             onScroll={updateActiveTeamSlide}
             className="col-span-12 mt-[clamp(8rem,12vw,12rem)] flex snap-x snap-mandatory gap-4 overflow-x-auto md:grid md:grid-cols-5 md:gap-x-8 md:gap-y-10 md:overflow-visible"
           >
-            {home.team.members.map((member) => (
-              <article data-motion-team-card className="motion-case w-[78vw] max-w-[21rem] shrink-0 snap-start md:w-auto md:max-w-none md:shrink" key={member.name}>
-                <div data-motion-team-media className="motion-media h-[clamp(20rem,96vw,26rem)] bg-[#D9D9D9] md:h-[clamp(18rem,24vw,26rem)]">
-                  <img
-                    className="team-media-image"
-                    src={member.image}
-                    alt={member.imageAlt}
-                    style={{ objectPosition: member.objectPosition }}
-                  />
-                </div>
-                <CaseCaption title={member.name} description={member.description} />
-              </article>
-            ))}
+            {home.team.members.map((member) => {
+              const imageDimensions = getImageDimensions(member.image);
+
+              return (
+                <article data-motion-team-card className="motion-case w-[78vw] max-w-[21rem] shrink-0 snap-start md:w-auto md:max-w-none md:shrink" key={member.name}>
+                  <div data-motion-team-media className="motion-media h-[clamp(20rem,96vw,26rem)] bg-[#D9D9D9] md:h-[clamp(18rem,24vw,26rem)]">
+                    <Image
+                      alt={member.imageAlt}
+                      className="team-media-image"
+                      height={imageDimensions.height}
+                      loading="lazy"
+                      sizes="(max-width: 767px) 82vw, 20vw"
+                      src={member.image}
+                      style={{ objectPosition: member.objectPosition }}
+                      width={imageDimensions.width}
+                    />
+                  </div>
+                  <CaseCaption title={member.name} description={member.description} />
+                </article>
+              );
+            })}
           </div>
           <div data-team-carousel-dots className="col-span-12 mt-5">
             {home.team.members.map((member, index) => (

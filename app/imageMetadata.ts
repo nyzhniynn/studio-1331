@@ -1,0 +1,118 @@
+type ImageDimensions = {
+  height: number;
+  width: number;
+};
+
+const fallbackImageDimensions: ImageDimensions = {
+  height: 900,
+  width: 1200,
+};
+
+const imageDimensions = new Map<string, ImageDimensions>([
+  ["/Photo/forma zvuka.png", { width: 600, height: 449 }],
+  ["/Photo/KNG ENERGO.png", { width: 600, height: 449 }],
+  ["/Photo/kngk group.png", { width: 1073, height: 801 }],
+  ["/Photo/kngk sport team.png", { width: 599, height: 449 }],
+  ["/Photo/kngk translogistics.png", { width: 600, height: 449 }],
+  ["/PhotoTeam/Evgeny1.png", { width: 1024, height: 1536 }],
+  ["/PhotoTeam/NIKITA.jpg", { width: 476, height: 542 }],
+  ["/PhotoTeam/Pavel.jpg", { width: 848, height: 1280 }],
+  ["/PhotoTeam/Roman.jpg", { width: 841, height: 1264 }],
+  ["/PhotoTeam/YEGOR.jpg", { width: 853, height: 1280 }],
+  ["/Case/FORMA ZVUKA/1.jpg", { width: 3200, height: 2826 }],
+  ["/Case/FORMA ZVUKA/2.jpg", { width: 3200, height: 2360 }],
+  ["/Case/FORMA ZVUKA/3.jpg", { width: 3200, height: 6346 }],
+  ["/Case/FORMA ZVUKA/4.jpg", { width: 3200, height: 4666 }],
+  ["/Case/FORMA ZVUKA/5.jpg", { width: 3200, height: 4698 }],
+  ["/Case/FORMA ZVUKA/6.jpg", { width: 3200, height: 3644 }],
+  ["/Case/FORMA ZVUKA/7.jpg", { width: 3200, height: 4964 }],
+  ["/Case/FORMA ZVUKA/8.jpg", { width: 3200, height: 3132 }],
+  ["/Case/FORMA ZVUKA/9.jpg", { width: 3200, height: 4230 }],
+  ["/Case/FORMA ZVUKA/10.jpg", { width: 3200, height: 2030 }],
+  ["/Case/FORMA ZVUKA/11.jpg", { width: 3200, height: 3494 }],
+  ["/Case/KNGK ENERGO/1.png", { width: 3200, height: 3912 }],
+  ["/Case/KNGK ENERGO/2.png", { width: 3200, height: 4110 }],
+  ["/Case/KNGK ENERGO/3.png", { width: 3200, height: 2612 }],
+  ["/Case/KNGK ENERGO/4.png", { width: 3200, height: 1908 }],
+  ["/Case/KNGK ENERGO/5.png", { width: 3200, height: 2094 }],
+  ["/Case/KNGK ENERGO/6.png", { width: 3200, height: 4524 }],
+  ["/Case/KNGK ENERGO/7.png", { width: 3200, height: 3418 }],
+  ["/Case/KNGK ENERGO/8.png", { width: 3200, height: 6130 }],
+  ["/Case/KNGK ENERGO/9.png", { width: 3200, height: 2136 }],
+  ["/Case/KNGK ENERGO/10.png", { width: 3200, height: 4918 }],
+  ["/Case/KNGK ENERGO/11.png", { width: 3200, height: 2938 }],
+  ["/Case/KNGK ENERGO/12.png", { width: 3200, height: 2264 }],
+  ["/Case/KNGK ENERGO/13.png", { width: 3200, height: 3292 }],
+  ["/Case/KNGK ENERGO/14.png", { width: 3200, height: 2594 }],
+  ["/Case/KNGK ENERGO/15.png", { width: 3200, height: 2134 }],
+  ["/Case/KNGK ENERGO/16.png", { width: 3200, height: 4304 }],
+  ["/Case/KNGK ENERGO/17.jpg", { width: 3200, height: 4300 }],
+  ["/Case/KNGK ENERGO/18.png", { width: 3200, height: 1800 }],
+  ["/Case/KNGK GROUP/1.png", { width: 3200, height: 3736 }],
+  ["/Case/KNGK GROUP/2.png", { width: 3200, height: 7206 }],
+  ["/Case/KNGK GROUP/3.png", { width: 3200, height: 6252 }],
+  ["/Case/KNGK GROUP/4.jpg", { width: 3200, height: 5076 }],
+  ["/Case/KNGK GROUP/5.png", { width: 3200, height: 5740 }],
+  ["/Case/KNGK GROUP/6.png", { width: 3200, height: 1910 }],
+  ["/Case/KNGK GROUP/7.png", { width: 3200, height: 6462 }],
+  ["/Case/KNGK GROUP/8.png", { width: 3200, height: 5472 }],
+  ["/Case/KNGK GROUP/9.png", { width: 3200, height: 3536 }],
+  ["/Case/KNGK GROUP/10.png", { width: 3200, height: 5954 }],
+  ["/Case/KNGK GROUP/11.png", { width: 3200, height: 1996 }],
+  ["/Case/KNGK GROUP/12.png", { width: 3200, height: 5762 }],
+  ["/Case/KNGK GROUP/13.png", { width: 3200, height: 1910 }],
+  ["/Case/KNGK GROUP/14.png", { width: 3200, height: 9600 }],
+  ["/Case/KNGK GROUP/15.png", { width: 3200, height: 1668 }],
+  ["/Case/KNGK SPORT TEAM/1.png", { width: 3200, height: 1854 }],
+  ["/Case/KNGK SPORT TEAM/2.png", { width: 3200, height: 1854 }],
+  ["/Case/KNGK SPORT TEAM/3.png", { width: 3200, height: 2186 }],
+  ["/Case/KNGK SPORT TEAM/4.png", { width: 3200, height: 1772 }],
+  ["/Case/KNGK SPORT TEAM/5.jpg", { width: 3200, height: 5354 }],
+  ["/Case/KNGK SPORT TEAM/6.jpg", { width: 3200, height: 1596 }],
+  ["/Case/KNGK SPORT TEAM/7.jpg", { width: 3200, height: 2166 }],
+  ["/Case/KNGK SPORT TEAM/8.jpg", { width: 3200, height: 2186 }],
+  ["/Case/KNGK SPORT TEAM/9.jpg", { width: 3200, height: 2010 }],
+  ["/Case/KNGK SPORT TEAM/10.jpg", { width: 3200, height: 3608 }],
+  ["/Case/KNGK SPORT TEAM/11.png", { width: 3200, height: 2133 }],
+  ["/Case/KNGK SPORT TEAM/12.jpg", { width: 3200, height: 1800 }],
+  ["/Case/KNGK SPORT TEAM/13.jpg", { width: 3200, height: 6016 }],
+  ["/Case/KNGK SPORT TEAM/14.jpg", { width: 3200, height: 2866 }],
+  ["/Case/KNGK SPORT TEAM/15.jpg", { width: 3200, height: 4540 }],
+  ["/Case/KNGK SPORT TEAM/16.jpg", { width: 3200, height: 2186 }],
+  ["/Case/KNGK SPORT TEAM/17.jpg", { width: 2400, height: 4169 }],
+  ["/Case/KNGK SPORT TEAM/18.jpg", { width: 3200, height: 2866 }],
+  ["/Case/KNGK SPORT TEAM/19.jpg", { width: 3200, height: 1718 }],
+  ["/Case/KNGK SPORT TEAM/20.jpg", { width: 3200, height: 5188 }],
+  ["/Case/KNGK SPORT TEAM/21.jpg", { width: 3200, height: 1596 }],
+  ["/Case/KNGK SPORT TEAM/22.jpg", { width: 3200, height: 1938 }],
+  ["/Case/KNGK SPORT TEAM/23.png", { width: 3200, height: 1476 }],
+  ["/Case/KNGK TRANSLOGISTIKA/1.png", { width: 3200, height: 2316 }],
+  ["/Case/KNGK TRANSLOGISTIKA/2.png", { width: 3200, height: 3442 }],
+  ["/Case/KNGK TRANSLOGISTIKA/3.png", { width: 3200, height: 2092 }],
+  ["/Case/KNGK TRANSLOGISTIKA/4.png", { width: 3200, height: 3382 }],
+  ["/Case/KNGK TRANSLOGISTIKA/5.png", { width: 3200, height: 4184 }],
+  ["/Case/KNGK TRANSLOGISTIKA/6.png", { width: 3200, height: 3204 }],
+  ["/Case/KNGK TRANSLOGISTIKA/7.png", { width: 3200, height: 2092 }],
+  ["/Case/KNGK TRANSLOGISTIKA/8.png", { width: 3200, height: 3312 }],
+  ["/Case/KNGK TRANSLOGISTIKA/9.png", { width: 3200, height: 2092 }],
+  ["/Case/KNGK TRANSLOGISTIKA/10.png", { width: 3200, height: 4622 }],
+  ["/Case/KNGK TRANSLOGISTIKA/11.png", { width: 3200, height: 3042 }],
+  ["/Case/KNGK TRANSLOGISTIKA/12.png", { width: 3200, height: 4184 }],
+  ["/Case/KNGK TRANSLOGISTIKA/13.png", { width: 3200, height: 4245 }],
+  ["/Case/KNGK TRANSLOGISTIKA/14.png", { width: 3200, height: 2092 }],
+  ["/Case/KNGK TRANSLOGISTIKA/15.png", { width: 3200, height: 5666 }],
+  ["/Case/KNGK TRANSLOGISTIKA/16.png", { width: 3200, height: 2160 }],
+  ["/Case/KNGK TRANSLOGISTIKA/17.png", { width: 3200, height: 3588 }],
+]);
+
+function normalizeImageSrc(src: string) {
+  try {
+    return decodeURI(src);
+  } catch {
+    return src;
+  }
+}
+
+export function getImageDimensions(src: string): ImageDimensions {
+  return imageDimensions.get(normalizeImageSrc(src)) ?? fallbackImageDimensions;
+}

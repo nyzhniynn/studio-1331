@@ -1,9 +1,11 @@
 "use client";
 
 import type { MouseEvent } from "react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { getDictionary } from "../dictionaries";
 import type { CaseStudy } from "./caseData";
+import { getImageDimensions } from "./imageMetadata";
 import { useCaseTransition } from "./CaseTransitionProvider";
 import { getCasePath, getLocaleFromPathname } from "./i18n";
 
@@ -22,6 +24,7 @@ export default function CaseProjectNavLink({
   const locale = getLocaleFromPathname(pathname);
   const dictionary = getDictionary(locale);
   const { prefetchCase, switchCase } = useCaseTransition();
+  const imageDimensions = getImageDimensions(caseStudy.image);
   const label = direction === "previous"
     ? dictionary.caseDetail.previousProject
     : dictionary.caseDetail.nextProject;
@@ -40,7 +43,14 @@ export default function CaseProjectNavLink({
       onPointerEnter={() => prefetchCase(caseStudy)}
     >
       <figure data-case-detail-project-nav-media>
-        <img src={caseStudy.image} alt="" />
+        <Image
+          alt=""
+          height={imageDimensions.height}
+          loading="lazy"
+          sizes="(max-width: 767px) 45vw, 13rem"
+          src={caseStudy.image}
+          width={imageDimensions.width}
+        />
       </figure>
       <span data-case-detail-project-nav-meta>{label}</span>
       <span data-case-detail-project-nav-title>{displayTitle}</span>

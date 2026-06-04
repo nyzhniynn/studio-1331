@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import type { Dictionary } from "../dictionaries";
+import { getImageDimensions } from "./imageMetadata";
 
 type CaseVisualGalleryProps = {
   dictionary: Dictionary;
@@ -109,21 +111,34 @@ export default function CaseVisualGallery({ dictionary, images, title }: CaseVis
   return (
     <>
       <div data-case-detail-visual-stack>
-        {images.map((image, index) => (
-          <figure data-case-detail-visual key={`${image}-${index}`}>
-            <button
-              aria-label={formatLabel(labels.openSlide, { title, index: index + 1 })}
-              data-case-detail-visual-trigger
-              onClick={() => openLightbox(index)}
-              ref={(element) => {
-                triggerRefs.current[index] = element;
-              }}
-              type="button"
-            >
-              <img className="case-media-image" src={image} alt="" loading="lazy" decoding="async" />
-            </button>
-          </figure>
-        ))}
+        {images.map((image, index) => {
+          const imageDimensions = getImageDimensions(image);
+
+          return (
+            <figure data-case-detail-visual key={`${image}-${index}`}>
+              <button
+                aria-label={formatLabel(labels.openSlide, { title, index: index + 1 })}
+                data-case-detail-visual-trigger
+                onClick={() => openLightbox(index)}
+                ref={(element) => {
+                  triggerRefs.current[index] = element;
+                }}
+                type="button"
+              >
+                <Image
+                  alt=""
+                  className="case-media-image"
+                  height={imageDimensions.height}
+                  loading={index === 0 ? undefined : "lazy"}
+                  priority={index === 0}
+                  sizes="(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1439px) 47vw, 47vw"
+                  src={image}
+                  width={imageDimensions.width}
+                />
+              </button>
+            </figure>
+          );
+        })}
       </div>
 
       {activeIndex !== null ? (
@@ -171,10 +186,14 @@ export default function CaseVisualGallery({ dictionary, images, title }: CaseVis
           ) : null}
 
           <figure data-case-lightbox-frame>
-            <img
+            <Image
               alt={`${title} slide ${activeIndex + 1}`}
               data-case-lightbox-image
+              height={getImageDimensions(images[activeIndex]).height}
+              loading="lazy"
+              sizes="100vw"
               src={images[activeIndex]}
+              width={getImageDimensions(images[activeIndex]).width}
             />
           </figure>
 
