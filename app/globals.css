@@ -170,7 +170,6 @@ html[data-brand-transition] {
 }
 
 html[data-site-intro="true"] [data-desktop-menu],
-html[data-site-intro="true"] [data-mobile-menu],
 html[data-site-intro="true"] [data-site-footer] {
   opacity: 0 !important;
   visibility: hidden !important;
@@ -1043,6 +1042,7 @@ body::-webkit-scrollbar-button {
   display: block;
   width: 100%;
   height: 100%;
+  filter: grayscale(100%);
   object-fit: cover;
   transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -2232,7 +2232,11 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
     line-height: 0.9;
     letter-spacing: -0.02em;
     text-decoration: none;
-    transition: color 220ms ease;
+    transition:
+      color 220ms ease,
+      opacity 180ms ease,
+      visibility 180ms ease;
+    will-change: opacity, transform;
   }
 
   [data-mobile-menu][data-open="true"] [data-mobile-top-brand] {
@@ -2261,6 +2265,18 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
     letter-spacing: -0.02em;
     text-transform: uppercase;
     transform: translateX(-50%);
+    will-change: opacity, transform;
+  }
+
+  [data-motion-main-state="intro"] .hero-mobile-language-switcher {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  [data-motion-main-state="ready"] .hero-mobile-language-switcher {
+    opacity: 1;
+    visibility: visible;
   }
 
   .hero-mobile-language-switcher a,
@@ -2314,6 +2330,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
     letter-spacing: -0.02em !important;
     box-shadow: none;
     backdrop-filter: none;
+    will-change: opacity, transform;
   }
 
   [data-mobile-menu-toggle-line] {
@@ -2838,11 +2855,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 
   .hero-bloom-a {
-    display: block !important;
-    top: 24vh !important;
-    right: -6.9rem !important;
-    left: auto !important;
-    width: 15.6rem !important;
+    display: none !important;
   }
 
   .hero-bloom-b {
@@ -2868,17 +2881,11 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 
   .hero-bloom-e {
-    top: 17vh !important;
-    right: 69vw !important;
-    left: auto !important;
-    width: 4.8rem !important;
+    display: none !important;
   }
 
   .hero-bloom-f {
-    left: -6.2rem !important;
-    bottom: 8.2vh !important;
-    right: auto !important;
-    width: 12.8rem !important;
+    display: none !important;
   }
 
   [data-motion-stack]:not([data-motion-preset]) {
@@ -3356,7 +3363,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   [data-motion-preset="services"] header h2,
   [data-motion-preset="form"] h2 {
     font-size: clamp(3.4rem, 7vw, 6.5rem) !important;
-    line-height: 0.95 !important;
+    line-height: 0.86 !important;
   }
 
   [data-motion-preset="cases"] {
@@ -4214,7 +4221,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
 
   html[lang="ru"] [data-motion-hero-copy] {
     position: absolute;
-    top: calc(50% - clamp(13.4rem, 25vh, 14.8rem));
+    top: calc(50% - clamp(12.2rem, 22vh, 13.5rem));
     right: 0;
     left: 0;
     width: calc(100% - 0.5rem);
@@ -4225,7 +4232,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
 
   [data-motion-locale="ru"] [data-motion-hero-copy] {
     position: absolute;
-    top: calc(50% - clamp(13.4rem, 25vh, 14.8rem));
+    top: calc(50% - clamp(12.2rem, 22vh, 13.5rem));
     right: 0;
     left: 0;
     width: calc(100% - 0.5rem);
@@ -4243,7 +4250,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
     font-size: clamp(55px, 13.4vw, 64px) !important;
     font-style: normal !important;
     font-weight: 400 !important;
-    line-height: 0.95 !important;
+    line-height: 0.86 !important;
     letter-spacing: 0 !important;
     text-align: center;
     transform: translateX(-50%);
@@ -4342,5 +4349,16 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
 
   [data-motion-locale="ru"] .hero-caption-line-mobile {
     display: block !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .hero-bloom-a,
+  .hero-bloom-e,
+  .hero-bloom-f {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 }

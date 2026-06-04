@@ -40,3 +40,6 @@ tmp_edge_profile_*/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*

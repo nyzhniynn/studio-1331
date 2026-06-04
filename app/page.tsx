@@ -237,6 +237,21 @@ export default function Home({
   }, []);
 
   useLayoutEffect(() => {
+    if (!introFinished || !window.matchMedia("(max-width: 767px)").matches) {
+      return;
+    }
+
+    const mobileMenu = document.querySelector<HTMLElement>("[data-mobile-menu]");
+    const topBrand = document.querySelector<HTMLElement>("[data-mobile-top-brand]");
+    const languageSwitcher = document.querySelector<HTMLElement>(".hero-mobile-language-switcher");
+    const menuToggle = document.querySelector<HTMLElement>("[data-mobile-menu-toggle]");
+
+    gsap.set([mobileMenu, topBrand, languageSwitcher, menuToggle].filter(Boolean), {
+      clearProps: "opacity,visibility,transform",
+    });
+  }, [introFinished]);
+
+  useLayoutEffect(() => {
     if (!contentMounted || !contentReadyResolverRef.current) {
       return;
     }
@@ -286,9 +301,10 @@ export default function Home({
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[#f4f4ef] p-3 pb-8 sm:p-5">
-      {introFinished ? (
+      {contentMounted ? (
         <MobileMenu
           dictionary={dictionary}
+          introActive={!introFinished}
           isOpen={mobileMenuOpen}
           onNavigate={() => setMobileMenuOpen(false)}
           onToggle={() => setMobileMenuOpen((isOpen) => !isOpen)}
@@ -1302,17 +1318,19 @@ function DesktopMenu({ dictionary }: { dictionary: Dictionary }) {
 
 function MobileMenu({
   dictionary,
+  introActive,
   isOpen,
   onNavigate,
   onToggle,
 }: {
   dictionary: Dictionary;
+  introActive: boolean;
   isOpen: boolean;
   onNavigate: () => void;
   onToggle: () => void;
 }) {
   return (
-    <nav data-mobile-menu data-open={isOpen} aria-label="Mobile navigation">
+    <nav data-mobile-menu data-intro={introActive ? "true" : undefined} data-open={isOpen} aria-label="Mobile navigation">
       <a data-mobile-top-brand href="#top" onClick={onNavigate}>
         13:31
       </a>
@@ -1554,26 +1572,101 @@ function IntroOverlay({
               return;
             }
 
+            const isMobileIntro = window.matchMedia("(max-width: 767px)").matches;
             const heroLogo = document.querySelector<HTMLElement>("[data-motion-hero-brand]");
+            const mobileMenu = document.querySelector<HTMLElement>("[data-mobile-menu]");
+            const mobileTopBrand = document.querySelector<HTMLElement>("[data-mobile-top-brand]");
+            const mobileLanguage = document.querySelector<HTMLElement>(".hero-mobile-language-switcher");
+            const mobileMenuToggle = document.querySelector<HTMLElement>("[data-mobile-menu-toggle]");
+            const targetLogo = isMobileIntro && mobileTopBrand ? mobileTopBrand : heroLogo;
             const heroStage = document.querySelector<HTMLElement>("[data-motion-hero-stage]");
 
-            if (!heroLogo || !heroStage) {
+            if (!targetLogo || !heroStage) {
               completeIntro();
               return;
             }
 
-            const toRect = heroLogo.getBoundingClientRect();
+            const toRect = targetLogo.getBoundingClientRect();
             const stageRect = introStage.getBoundingClientRect();
             const targetLeft = toRect.left - stageRect.left;
             const targetTop = toRect.top - stageRect.top;
-            const targetFontSize = window.getComputedStyle(heroLogo).fontSize;
+            const targetFontSize = window.getComputedStyle(targetLogo).fontSize;
 
-            gsap.set(heroLogo, { autoAlpha: 0 });
+            if (heroLogo) {
+              gsap.set(heroLogo, { autoAlpha: 0 });
+            }
+
+            if (isMobileIntro) {
+              gsap.set([mobileTopBrand, mobileLanguage, mobileMenuToggle].filter(Boolean), { autoAlpha: 0 });
+            }
 
             sharedTimeline = gsap.timeline({
               defaults: { ease: "power4.inOut" },
               onComplete: completeIntro,
             });
+
+            if (isMobileIntro && mobileTopBrand) {
+              sharedTimeline
+                .to(introStudio, {
+                  autoAlpha: 0,
+                  x: -10,
+                  duration: 0.38,
+                  ease: "power2.inOut",
+                }, 0.46)
+                .to(introBrand, {
+                  left: targetLeft,
+                  top: targetTop,
+                  x: 0,
+                  y: 0,
+                  scale: 1,
+                  fontSize: targetFontSize,
+                  duration: 1.15,
+                }, 0)
+                .add(() => {
+                  if (mobileMenu) {
+                    gsap.set(mobileMenu, { autoAlpha: 1 });
+                    mobileMenu.removeAttribute("data-intro");
+                  }
+
+                  gsap.set(mobileTopBrand, { autoAlpha: 1 });
+                  gsap.set(introBrand, { autoAlpha: 0 });
+                })
+                .to(intro, {
+                  autoAlpha: 0,
+                  duration: 0.08,
+                  ease: "none",
+                }, "<");
+
+              if (mobileLanguage) {
+                sharedTimeline.fromTo(
+                  mobileLanguage,
+                  { autoAlpha: 0, y: -6 },
+                  {
+                    autoAlpha: 1,
+                    y: 0,
+                    duration: 0.36,
+                    ease: "power3.out",
+                  },
+                  "<+=0.08",
+                );
+              }
+
+              if (mobileMenuToggle) {
+                sharedTimeline.fromTo(
+                  mobileMenuToggle,
+                  { autoAlpha: 0, y: -6 },
+                  {
+                    autoAlpha: 1,
+                    y: 0,
+                    duration: 0.42,
+                    ease: "power3.out",
+                  },
+                  "<",
+                );
+              }
+
+              return;
+            }
 
             sharedTimeline
               .to(introBrand, {
@@ -1585,7 +1678,7 @@ function IntroOverlay({
                 fontSize: targetFontSize,
                 duration: 1.15,
               })
-              .set(heroLogo, { autoAlpha: 1 })
+              .set(targetLogo, { autoAlpha: 1 })
               .to(intro, {
                 autoAlpha: 0,
                 duration: 0.02,
