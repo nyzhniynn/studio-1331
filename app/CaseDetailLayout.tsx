@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import CaseContactForm from "./CaseContactForm";
+import CaseMobileActions from "./CaseMobileActions";
 import CaseProjectNavLink from "./CaseProjectNavLink";
 import CaseVisualGallery from "./CaseVisualGallery";
 import type { CaseStudy } from "./caseData";
@@ -88,7 +89,7 @@ export default function CaseDetailLayout({
         </aside>
       </section>
 
-      <CaseQuietFooter nextCase={nextCase} previousCase={previousCase} />
+      <CaseQuietFooter caseStudy={caseStudy} nextCase={nextCase} previousCase={previousCase} />
       <CaseContactForm dictionary={dictionary} />
     </main>
   );
@@ -140,9 +141,11 @@ function VisualStack({ caseStudy, dictionary }: { caseStudy: CaseStudy; dictiona
 }
 
 function CaseQuietFooter({
+  caseStudy,
   nextCase,
   previousCase,
 }: {
+  caseStudy: CaseStudy;
   nextCase: CaseStudy;
   previousCase: CaseStudy;
 }) {
@@ -151,6 +154,7 @@ function CaseQuietFooter({
       <div data-case-detail-footer-line aria-hidden="true" />
       <CaseProjectNavCard direction="previous" caseStudy={previousCase} />
       <CaseProjectNavCard direction="next" caseStudy={nextCase} />
+      <CaseMobileActions caseStudy={caseStudy} />
     </footer>
   );
 }

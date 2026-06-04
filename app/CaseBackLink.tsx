@@ -32,7 +32,8 @@ export default function CaseBackLink({ caseStudy }: { caseStudy: CaseStudy }) {
 
   return (
     <Link data-case-back href={getLocalizedHashHref("/#work", locale)} onClick={handleClick}>
-      {dictionary.caseDetail.backToCases}
+      <span data-case-back-label>{dictionary.caseDetail.backToCases}</span>
+      {locale === "ru" ? <span data-case-back-label-mobile>НА ГЛАВНУЮ</span> : null}
     </Link>
   );
 }
