@@ -23,7 +23,7 @@ export const homeCaseRevealStep = 5;
 export const homeVisibleCaseCountKey = "studio-1331:home-visible-case-count";
 
 function caseAsset(folder: string, file: string) {
-  return `/Case/${encodeURIComponent(folder)}/${file}`;
+  return `/Case/${encodeURIComponent(folder)}/${file.replace(/\.(?:png|jpe?g)$/i, ".webp")}`;
 }
 
 function buildCaseSlides(folder: string, files: string[]) {
