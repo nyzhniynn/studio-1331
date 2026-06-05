@@ -131,7 +131,7 @@ export default function CaseVisualGallery({ dictionary, images, title }: CaseVis
                   height={imageDimensions.height}
                   loading={index === 0 ? undefined : "lazy"}
                   priority={index === 0}
-                  sizes="(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1439px) 47vw, 47vw"
+                  sizes="(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1536px) 47vw, 47vw"
                   src={image}
                   width={imageDimensions.width}
                 />

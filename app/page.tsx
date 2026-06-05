@@ -911,8 +911,8 @@ function MainPageContent({
               const layout = getHomeCaseLayout(index);
               const imageDimensions = getImageDimensions(caseStudy.image);
               const imageSizes = index === 1
-                ? "(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1439px) 58vw, 58vw"
-                : "(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1439px) 33vw, 33vw";
+                ? "(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1536px) 58vw, 58vw"
+                : "(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1536px) 33vw, 33vw";
 
               return (
                 <article

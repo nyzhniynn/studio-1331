@@ -536,7 +536,7 @@ body::-webkit-scrollbar-button {
   margin: 0;
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1537px) {
   [data-site-footer-brand] {
     font-size: 18rem;
   }
@@ -2037,7 +2037,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1537px) {
   html[lang="en"] [data-motion-yellow-layer] > .relative {
     padding: 36px 40px 40px !important;
   }
@@ -3333,7 +3333,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 }
 
-@media (min-width: 768px) and (max-width: 1439px) {
+@media (min-width: 768px) and (max-width: 1536px) {
   [data-motion-section] .grid {
     column-gap: clamp(0.75rem, 1.65vw, 1.5rem) !important;
   }
@@ -3928,7 +3928,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1537px) {
   html[lang="ru"] [data-process-headline],
   html[lang="ru"] [data-team-intro-title],
   html[lang="ru"] [data-contact-copy] {
@@ -3967,7 +3967,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 }
 
-@media (min-width: 1024px) and (max-width: 1439px) {
+@media (min-width: 1024px) and (max-width: 1536px) {
   html[lang="ru"] [data-team-intro-title] {
     grid-column: 1 / 11 !important;
     max-width: none !important;
@@ -4006,7 +4006,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 }
 
-@media (min-width: 768px) and (max-width: 1439px) {
+@media (min-width: 768px) and (max-width: 1536px) {
   html[lang="ru"] [data-process-headline],
   html[lang="ru"] [data-team-intro-title],
   html[lang="ru"] [data-contact-copy] {
@@ -4032,7 +4032,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 }
 
-@media (min-width: 1024px) and (max-width: 1439px) {
+@media (min-width: 1024px) and (max-width: 1536px) {
   html[lang="ru"] [data-team-intro-title] {
     grid-column: 3 / 11 !important;
     padding-left: 0 !important;
@@ -4050,7 +4050,7 @@ html[lang="ru"] .hero-title [data-motion-hero-line].hero-title-line-mobile {
   }
 }
 
-@media (min-width: 768px) and (max-width: 1439px) {
+@media (min-width: 768px) and (max-width: 1536px) {
   html[lang="en"] [data-motion-yellow-layer] > .relative {
     padding: clamp(1.75rem, 2.5vw, 2.25rem) clamp(1.75rem, 2.75vw, 2.5rem) clamp(2rem, 2.75vw, 2.5rem) !important;
   }
