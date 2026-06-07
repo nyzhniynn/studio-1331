@@ -1,18 +1,68 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getDictionary } from "../dictionaries";
 import FooterHashLink from "./FooterHashLink";
 import { getLocaleFromPathname } from "./i18n";
 
+async function copyText(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textArea = document.createElement("textarea");
+
+  textArea.value = value;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.top = "0";
+  textArea.style.left = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textArea);
+}
+
 export default function SiteFooter() {
   const pathname = usePathname();
   const dictionary = getDictionary(getLocaleFromPathname(pathname));
+  const copyToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [copyToastMessage, setCopyToastMessage] = useState("");
   const footerMenuItems = dictionary.nav.mobileItems.map((item) => ({
     ...item,
     href: `/${item.href}` as `/#${string}`,
   }));
   const footerServiceItems = dictionary.home.services.items.map((item) => item.title);
+  const showCopyToast = (message: string) => {
+    setCopyToastMessage(message);
+
+    if (copyToastTimeoutRef.current) {
+      clearTimeout(copyToastTimeoutRef.current);
+    }
+
+    copyToastTimeoutRef.current = setTimeout(() => {
+      setCopyToastMessage("");
+      copyToastTimeoutRef.current = null;
+    }, 2200);
+  };
+  const handleCopy = async (value: string, successMessage: string) => {
+    try {
+      await copyText(value);
+      showCopyToast(successMessage);
+    } catch {
+      showCopyToast(dictionary.footer.copyError);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (copyToastTimeoutRef.current) {
+        clearTimeout(copyToastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <footer
@@ -53,9 +103,23 @@ export default function SiteFooter() {
 
           <address className="site-footer__panel site-footer__panel--contacts">
             <p className="site-footer__panel-label">{dictionary.footer.contactsLabel}</p>
-            <a className="site-footer__text-link" href={`mailto:${dictionary.footer.email}`}>
+            <button
+              className="site-footer__text-link site-footer__copy-button"
+              onClick={() => handleCopy(dictionary.footer.email, dictionary.footer.copyEmailSuccess)}
+              type="button"
+            >
               {dictionary.footer.email}
+            </button>
+            <a className="site-footer__text-link" href={dictionary.footer.telegramUrl} rel="noreferrer" target="_blank">
+              {dictionary.footer.telegram}
             </a>
+            <button
+              className="site-footer__text-link site-footer__copy-button"
+              onClick={() => handleCopy(dictionary.footer.phone, dictionary.footer.copyPhoneSuccess)}
+              type="button"
+            >
+              {dictionary.footer.phone}
+            </button>
             <FooterHashLink className="site-footer__text-link" href="/#brief">
               {dictionary.footer.startProject}
             </FooterHashLink>
@@ -81,6 +145,13 @@ export default function SiteFooter() {
             </div>
           </section>
         </div>
+      </div>
+      <div
+        aria-live="polite"
+        className="site-footer__copy-toast"
+        data-visible={copyToastMessage ? "true" : "false"}
+      >
+        {copyToastMessage}
       </div>
     </footer>
   );

@@ -366,6 +366,7 @@ function MainPageContent({
   const home = dictionary.home;
   const heroMobileTitleLines = (home.hero as typeof home.hero & { mobileTitleLines?: string[] }).mobileTitleLines;
   const heroMobileCaptionLines = (home.hero as typeof home.hero & { mobileCaptionLines?: string[] }).mobileCaptionLines;
+  const contactMobileTextLines = (home.contact as typeof home.contact & { mobileTextLines?: string[] }).mobileTextLines;
   const brief = home.brief;
   const approachLabelClassName = locale === "ru"
     ? "col-span-12 self-start pt-[0.22em] font-sans text-[clamp(1rem,1.2vw,1.5rem)] font-normal uppercase leading-none tracking-[-0.035em] md:translate-y-[0.35rem] lg:col-span-3"
@@ -376,6 +377,27 @@ function MainPageContent({
     : "col-span-12 max-w-[35rem] font-sans text-[clamp(1.25rem,1.25vw,1.55rem)] leading-[1.25] tracking-[-0.035em] lg:col-start-3 lg:col-end-6";
   const primaryRoleLabelLines = home.team.primaryRoleLabelLines;
   const secondaryRoleLabelLines = home.team.secondaryRoleLabelLines;
+  const renderContactCopyLines = (lines: string[]) => lines.map((line, index) => {
+    const emailStart = line.indexOf(home.contact.email);
+    const emailEnd = emailStart >= 0
+      ? emailStart + home.contact.email.length + (line[emailStart + home.contact.email.length] === "," ? 1 : 0)
+      : -1;
+
+    return (
+      <span className={`block ${locale !== "ru" ? "lg:whitespace-nowrap" : ""} ${index === 0 && locale !== "ru" ? "lg:pl-[300px]" : ""}`} key={line}>
+        {emailStart >= 0 ? (
+          <>
+            {line.slice(0, emailStart)}
+            <span data-contact-copy-inline-email>{line.slice(emailStart, emailEnd)}</span>
+            {line.slice(emailEnd)}
+          </>
+        ) : (
+          line
+        )}
+        {index < lines.length - 1 ? " " : ""}
+      </span>
+    );
+  });
 
   const updateActiveTeamSlide = useCallback(() => {
     const carousel = teamCarouselRef.current;
@@ -1283,14 +1305,14 @@ function MainPageContent({
           </p>
 
           <div className="col-span-12 mt-10 lg:col-start-3 lg:col-end-13 lg:mt-0">
-            <p data-contact-copy className="font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714]">
-              {home.contact.textLines.map((line, index) => (
-                <span className={`block ${locale !== "ru" ? "lg:whitespace-nowrap" : ""} ${index === 0 && locale !== "ru" ? "lg:pl-[300px]" : ""}`} key={line}>
-                  {line}
-                  {index < home.contact.textLines.length - 1 ? " " : ""}
-                </span>
-              ))}
+            <p data-contact-copy data-contact-copy-variant="desktop" className="font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714]">
+              {renderContactCopyLines(home.contact.textLines)}
             </p>
+            {contactMobileTextLines ? (
+              <p data-contact-copy data-contact-copy-variant="mobile" className="font-serif text-[64px] leading-[70px] tracking-[-0.02em] text-[#141714]">
+                {renderContactCopyLines(contactMobileTextLines)}
+              </p>
+            ) : null}
           </div>
 
           <div className="col-span-12 mt-[120px] text-center lg:col-start-1 lg:col-end-13">
