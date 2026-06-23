@@ -7,6 +7,7 @@ import { CaseTransitionProvider } from "./CaseTransitionProvider";
 import LocaleHtmlSync from "./LocaleHtmlSync";
 import SiteFooter from "./SiteFooter";
 import { defaultLocale, isLocale, type Locale } from "./i18n";
+import { GA_MEASUREMENT_ID } from "../lib/analytics";
 
 const siteChromeBootScript = `
 (() => {
@@ -28,6 +29,20 @@ const siteChromeBootScript = `
     delete document.documentElement.dataset.siteIntro;
   }
 })();
+`;
+
+const googleAnalyticsInitScript = `
+window.dataLayer = window.dataLayer || [];
+
+if (typeof window.gtag !== "function") {
+  window.gtag = function gtag(){window.dataLayer.push(arguments);};
+}
+
+if (!window.__studio1331GaInitialized) {
+  window.__studio1331GaInitialized = true;
+  window.gtag("js", new Date());
+  window.gtag("config", ${JSON.stringify(GA_MEASUREMENT_ID)});
+}
 `;
 
 export const metadata: Metadata = {
@@ -68,6 +83,16 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: siteChromeBootScript }}
           id="site-chrome-boot"
           strategy="beforeInteractive"
+        />
+        <Script
+          id="google-analytics-src"
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script
+          dangerouslySetInnerHTML={{ __html: googleAnalyticsInitScript }}
+          id="google-analytics-init"
+          strategy="afterInteractive"
         />
         <LocaleHtmlSync />
         <CaseTransitionProvider>
