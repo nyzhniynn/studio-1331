@@ -2,8 +2,6 @@ export const GA_MEASUREMENT_ID = "G-B1W1ZNZGE";
 
 declare global {
   interface Window {
-    __studio1331GaInitialized?: boolean;
-    dataLayer?: IArguments[];
     gtag?: (...args: unknown[]) => void;
   }
 }

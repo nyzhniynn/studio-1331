@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { headers } from "next/headers";
 import Script from "next/script";
 import "./globals.css";
@@ -29,20 +30,6 @@ const siteChromeBootScript = `
     delete document.documentElement.dataset.siteIntro;
   }
 })();
-`;
-
-const googleAnalyticsInitScript = `
-window.dataLayer = window.dataLayer || [];
-
-if (typeof window.gtag !== "function") {
-  window.gtag = function gtag(){window.dataLayer.push(arguments);};
-}
-
-if (!window.__studio1331GaInitialized) {
-  window.__studio1331GaInitialized = true;
-  window.gtag("js", new Date());
-  window.gtag("config", ${JSON.stringify(GA_MEASUREMENT_ID)});
-}
 `;
 
 export const metadata: Metadata = {
@@ -84,16 +71,6 @@ export default async function RootLayout({
           id="site-chrome-boot"
           strategy="beforeInteractive"
         />
-        <Script
-          id="google-analytics-src"
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script
-          dangerouslySetInnerHTML={{ __html: googleAnalyticsInitScript }}
-          id="google-analytics-init"
-          strategy="afterInteractive"
-        />
         <LocaleHtmlSync />
         <CaseTransitionProvider>
           {children}
@@ -101,6 +78,7 @@ export default async function RootLayout({
         </CaseTransitionProvider>
         <CustomCursor />
       </body>
+      <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />
     </html>
   );
 }
