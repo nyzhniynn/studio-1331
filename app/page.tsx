@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MotionOrchestrator from "./MotionOrchestrator";
@@ -30,6 +31,7 @@ import { defaultLocale, getCasePath, type Locale } from "./i18n";
 import { getImageDimensions } from "./imageMetadata";
 import { getLocalizedPublishedCaseStudies } from "./localizedCases";
 import { getDictionary, type Dictionary } from "../dictionaries";
+import { reachYandexGoal, YANDEX_METRIKA_FORM_SUBMIT_GOAL } from "../lib/analytics";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -336,11 +338,13 @@ function MainPageContent({
   introActive: boolean;
   locale: Locale;
 }) {
+  const router = useRouter();
   const caseGridRef = useRef<HTMLDivElement>(null);
   const caseHoverFrameRef = useRef<number | null>(null);
   const activeCaseHoverMediaRef = useRef<HTMLElement | null>(null);
   const pendingCaseHoverRef = useRef<({ media: HTMLElement } & CaseHoverValues) | null>(null);
   const contactFileInputRef = useRef<HTMLInputElement>(null);
+  const contactSubmittingRef = useRef(false);
   const [initialVisibleCaseCount] = useState(readSavedVisibleCaseCount);
   const previousVisibleCaseCountRef = useRef(initialVisibleCaseCount);
   const teamCarouselRef = useRef<HTMLDivElement>(null);
@@ -648,10 +652,11 @@ function MainPageContent({
   const handleContactSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (contactFormStatus === "loading") {
+    if (contactFormStatus === "loading" || contactSubmittingRef.current) {
       return;
     }
 
+    contactSubmittingRef.current = true;
     setContactFormStatus("loading");
     setContactFormMessage("");
 
@@ -683,22 +688,23 @@ function MainPageContent({
         throw new Error(result?.error ?? "Could not send the request. Please try again.");
       }
 
+      reachYandexGoal(YANDEX_METRIKA_FORM_SUBMIT_GOAL);
       resetContactForm();
-      setContactFormStatus("success");
-      setContactFormMessage(brief.success);
+      router.push("/thank-you");
     } catch (error) {
+      contactSubmittingRef.current = false;
       setContactFormStatus("error");
       setContactFormMessage(error instanceof Error ? error.message : brief.error);
     }
   }, [
     attachedContactFiles,
     brief.error,
-    brief.success,
     contactBudget,
     contactFields,
     contactFormStatus,
     contactServices,
     resetContactForm,
+    router,
   ]);
 
   useLayoutEffect(() => {

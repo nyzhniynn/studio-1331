@@ -7,6 +7,7 @@ import CustomCursor from "./CustomCursor";
 import { CaseTransitionProvider } from "./CaseTransitionProvider";
 import LocaleHtmlSync from "./LocaleHtmlSync";
 import SiteFooter from "./SiteFooter";
+import YandexMetrika from "./YandexMetrika";
 import { defaultLocale, isLocale, type Locale } from "./i18n";
 import { GA_MEASUREMENT_ID } from "../lib/analytics";
 
@@ -77,6 +78,7 @@ export default async function RootLayout({
           <SiteFooter />
         </CaseTransitionProvider>
         <CustomCursor />
+        <YandexMetrika />
       </body>
       <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />
     </html>

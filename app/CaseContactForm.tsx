@@ -1,9 +1,11 @@
 "use client";
 
 import { type ChangeEvent, type DragEvent, type FormEvent, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { Dictionary } from "../dictionaries";
+import { reachYandexGoal, YANDEX_METRIKA_FORM_SUBMIT_GOAL } from "../lib/analytics";
 import FormChoiceRow from "./FormChoiceRow";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -58,6 +60,7 @@ function CaseFormLineField({
 }
 
 export default function CaseContactForm({ dictionary }: { dictionary: Dictionary }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [fields, setFields] = useState<CaseContactFields>({
     company: "",
@@ -75,6 +78,7 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
   const buttonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const isSubmittingRef = useRef(false);
   const brief = dictionary.home.brief;
   const contact = dictionary.caseDetail.contactForm;
 
@@ -273,10 +277,11 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (status === "loading") {
+    if (status === "loading" || isSubmittingRef.current) {
       return;
     }
 
+    isSubmittingRef.current = true;
     setStatus("loading");
     setStatusMessage("");
 
@@ -308,10 +313,11 @@ export default function CaseContactForm({ dictionary }: { dictionary: Dictionary
         throw new Error(result?.error ?? brief.error);
       }
 
+      reachYandexGoal(YANDEX_METRIKA_FORM_SUBMIT_GOAL);
       resetForm();
-      setStatus("success");
-      setStatusMessage(brief.success);
+      router.push("/thank-you");
     } catch (error) {
+      isSubmittingRef.current = false;
       setStatus("error");
       setStatusMessage(error instanceof Error ? error.message : brief.error);
     }

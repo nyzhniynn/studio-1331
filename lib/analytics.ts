@@ -1,8 +1,11 @@
 export const GA_MEASUREMENT_ID = "G-B1W1ZNZ2GE";
+export const YANDEX_METRIKA_ID = 111116609;
+export const YANDEX_METRIKA_FORM_SUBMIT_GOAL = "form_submit";
 
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
+    ym?: (counterId: number, method: string, ...params: unknown[]) => void;
   }
 }
 
@@ -25,6 +28,22 @@ export function trackEvent(
   }
 
   window.gtag("event", name, params ?? {});
+}
+
+export function reachYandexGoal(goal: string) {
+  if (typeof window === "undefined" || typeof window.ym !== "function") {
+    return;
+  }
+
+  window.ym(YANDEX_METRIKA_ID, "reachGoal", goal);
+}
+
+export function trackYandexPageView(url: string, referer?: string) {
+  if (typeof window === "undefined" || typeof window.ym !== "function") {
+    return;
+  }
+
+  window.ym(YANDEX_METRIKA_ID, "hit", url, referer ? { referer } : undefined);
 }
 
 export {};
